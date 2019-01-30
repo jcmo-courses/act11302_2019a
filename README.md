@@ -1,2 +1,3 @@
-# act11302_2019a_carpeta
-Calculo Actuarial III
+# ACT-11302 Calculo Actuarial III
+
+*Primavera 2019*
