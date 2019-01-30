@@ -1,0 +1,319 @@
+---
+title: ACT-11302 Calculo Actuarial III
+subtitle: Sesion 00 - Introduccion a R
+author: Juan Carlos Martinez-Ovando
+institute: Departamento Academico de Actuaria y Seguros
+titlegraphic: /svm-r-sources/ITAM2016.png
+fontsize: 10pt
+output:
+ beamer_presentation:
+    template: ~/svm-r-sources/svm-latex-beamer.tex
+    keep_tex: true
+# toc: true
+    slide_level: 2
+ ioslides_presentation:
+    smaller: true
+    logo: ~/svm-r-sources/ITAM2016.png
+make149: true
+---
+
+<style>
+slides > slide.backdrop {
+  background: white;
+  border-bottom: 0px;
+  box-shadow: 0 0 0;
+}
+
+
+slides > slide {
+  font-family: 'Open Sans', Helvetica, Arial, sans-serif;
+  border-bottom: 3px solid  #F66733;
+  box-shadow:  0 3px 0 #522D80;
+
+}
+
+.title-slide hgroup h1 {
+  color: #522D80;
+}
+
+h2 {
+
+  color: #522D80;
+}
+
+slides > slide.dark {
+  background: #522D80 !important;
+  border-bottom: 0;
+  box-shadow: 0 0 0;
+}
+
+.segue h2 {
+  color: white;
+}
+
+slides > slide.title-slide {
+  border-bottom: 0;
+  box-shadow: 0 0 0;
+}
+
+ol, ul {
+
+padding-bottom: 10px;
+
+}
+
+</style>
+
+
+Preambulo
+---
+
+En este curso usaremos [R](https://www.r-project.org/) como herramienta analitica de computo, y [RStudio](https://www.rstudio.com/) como editor y visualizador a datos y analisis. 
+
+En estas notas revisaremos algunas de las funcionalidades mas general de R. Empezaremos con la instalacion de paquetes o librerias uqe utlizaremos a lo largo del curso. 
+
+Desde RStudio estas librerias pueden instalarse desde el repositorio de R en el ITAM empleando las siguientes instrucciones:
+
+
+Paquetes
+---
+
+```
+options("repos"="http://cran.itam.mx")
+
+upackages = c("actuar","repmis", "tidyr", 
+              "lubridate", "dplyr", "ggplot2", "googledrive")
+
+install.packages(upackages)
+```
+
+```{r packages, include=FALSE}
+options("repos"="http://cran.itam.mx")
+
+if(!require("actuar")){install.packages("actuar")}
+if(!require("repmis")){install.packages("repmis")}
+if(!require("tidyr")){install.packages("tidyr")}
+if(!require("lubridate")){install.packages("lubridate")}
+if(!require("dplyr")){install.packages("dplyr")}
+if(!require("ggplot2")){install.packages("ggplot2")}
+if(!require("googledrive")){install.packages("googledrive")}
+```
+
+Paquetes
+---
+
+Breve descripcion y uso:
+
+*  `repmis` - Importacion de datos
+
+*  `tidyr` - Manipulacion de datos
+
+*  `lubridate` - Manejo de datos temporales
+
+*  `dplyr` - Manipulacion y agregacion de datos
+
+*  `ggplot2` - Visualizacion de datos
+
+```{r load_packages, include=FALSE}
+library("lubridate")
+library("ggplot2")
+library("tidyr")
+library("dplyr")
+library("googledrive")
+```
+
+Importacion de datos
+---
+
+Cargamos los datos desde un repositorio en GitHUb (en este caso, el repositorio de datos de nuestro curso). Para esto, empleamos en RStudio el paquete `repmis`, `curl`, APIs, entre otros. 
+
+Los datos del curso estan almacenados en carpetas de Google Drive, veremos como descarcarlos directamente desde tales repositorios.
+
+Por ejemplo, para leer los datos de reclamos de seguros de viviendas en Dinamarca\footnote{Referencia: McNeil et al (2007) *Estimating the Tails of Loss Severity Distributions using Extreme Value Theory1997*}, empleamos:
+
+Codigo 1
+---
+
+```
+library("googledrive")
+temp <- tempfile(fileext = ".zip")
+dl <- download.file(
+        as_id("1AiZda_1-2nwrxI8fLD0Y6e5rTg7aocv0"),
+        path = temp,
+        overwrite = TRUE)
+output <- unzip(temp, exdir = tempdir())
+datos <- read.csv(out[14], sep = ",")
+```
+
+Codigo 2
+---
+
+```
+library(repmis)
+
+source_data("https://github.com/jcmartinezovando/est25134_2017a/blob/master/datos/DanishInsuranceMultivariate_Data.RData?raw=true")
+```
+
+Comentario
+---
+
+Noten que debemos especificar el path de los datos desde el repositorio en GitHub; este lo pueden encontrar seleccionando la opcion `Copy path` que se despliega al seleccionar cada archivo da datos. Empleando `repmis` es necesario que el path de datos sea `blob` Noten tambien la ultima instruccion para especificar que los datos son libres de formato. 
+Tambien podemos cargar los datos en R empleando las siguientes opciones.
+
+Otra forma
+---
+
+```
+rm(list=ls())
+githubURL <- "https://github.com/jcmartinezovando/est25134_2017a/raw/master/datos/DanishInsuranceMultivariate_Data.RData"
+
+# For Windows
+load(url(githubURL))
+
+# If trouble, try this in Linux or iOS
+download.file(githubURL,"DanishInsuranceMultivariate_Data")
+load("DanishInsuranceMultivariate_Data")
+ls()
+```
+
+Otros comentarios
+---
+
+Noten que en este caso, el path de datos debe ser del tipo `raw`. Es la instruccion analoga a la ultima que empleamos en `repmis`.
+
+La ultima opcion es quizas la mas conveniente, pues es autonoma de otras librerias a las preestablecidas en R. Sin embargo, en ciertos contextos `repmis` puede ser una muy buena opcion.
+
+Operaciones con vectores
+---
+
+Los vectores en R se definen, en principio, como secuencias de datos. Las entradas de los vectores se acceden empleando `[]`
+
+```{r}
+a <- c(5, 2, 4.1, 7, 9.2)
+a
+a[2:4]
+```
+
+Operaciones
+---
+
+Como en otros lenguajes de programacion, las operaciones con vectores se realizan entrada por entrada. En particular, debemos cuidar que el pŕoducto de vectores, como se muestra a continuacion, los componentes sean compatibles en longitud.
+
+```{r}
+b <- a + 10
+b
+c <- sqrt(a)
+c
+a + c
+10*a
+length(a)
+length(c)
+a*c
+```
+
+
+Operaciones
+---
+Se pueden definir arreglos vectoriales de objetos particulares, como textos:
+```{r}
+vector_texto <- c('manzana','manzana','pera','platano','fresa')
+vector_texto
+```
+Solo que en este caso, varias operaciones (particularmente aritmeticas) no son aplicables.
+
+Data-frames
+---
+
+Los `data.frame`s son arreglos de vectores en R cuyos vectores entrada (columna) pueden tener atributos particulares. A lo largo del curso estaremos trabajando con `data.frame`s todo el tiempo. 
+
+Para definir *data-frames* podemos usar instrucciones de `R-base` o del paquete `dplyr`. A continuacion un ejemplo:
+
+```{r}
+# R-base
+tabla1 <- data.frame(n = 1:5, valor = a, fruta = vector_texto) 
+tabla1
+# dplyr
+tabla2 <- data_frame(n = 1:5, valor = a, fruta = vector_texto) 
+tabla2
+```
+
+Consultas
+---
+
+Consultas a entradas renglon o columna de los data frames pueden relaizar analogamente en `R-base` o `dplyr`. Sin embargo, en el segundo se cuanta con mas atributos de utilidad que explotaremos mas adelante.
+
+```{r}
+# R-base
+tabla1$valor
+tabla1$valor[3]
+# dplyr
+tabla2$valor
+tabla2$valor[3]
+```
+
+```{r}
+# R-base
+tabla1[2,]
+# dplyr
+tabla2[2,]
+```
+
+Funciones
+---
+
+Las funciones en `R` son reglas de asociacion de objetos. Dos ejemplos.
+
+- Funcion convencional
+
+```{r}
+ejemplo_fun <- function(x){
+  y <- x + 1
+  y^2 # este ultimo valor es el que regresa la funcion
+}
+
+ejemplo_fun(2)
+(2+1)^2
+```
+
+Funcion con funciones anonimas como argumento
+---
+
+
+```{r}
+procentaje_agr <- function(x, mult = 100, FUN = round, ...){
+ porcentaje <- FUN(x * mult, ...)
+ paste(porcentaje, "%", sep = "")
+}
+utilidades <- c(2100, 1430, 3580, 5230)
+utilidades_relativas <- function(x) round(x / sum(x) * 100)
+procentaje_agr(utilidades,
+        FUN = function(x) round(x / sum(x) * 100) )
+
+```
+
+Pipes
+---
+
+En `dply` existen varias funciones que son utiles para la manipulacion de `data-frame`s. Entre ellas:
+
+1. `select` - extraer columnas
+2. `filter` - extraer renglones
+3. `mutate` - crear variables
+4. `group_by` - agrupar por columnas
+5. `summarise` - resumen de contenido y caracteristicas.
+
+En particular, cuanta con la funcion `%>%` (`pipe`), que definen secuencias de funciones aplicadas a uno o varios objetos. Por ejemplo:
+
+```{r}
+9 %>% sqrt
+```
+
+Mas sobre pipes
+---
+
+Esta funcion se define como la secuencia de crear el objeto `9` y posteriormente aplicarle la funcion `sqrt`. Esto es equivalente a la siguiente instruccion en `R-base`:
+
+```{r}
+sqrt(9)
+```
+
