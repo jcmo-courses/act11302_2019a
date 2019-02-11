@@ -24,9 +24,9 @@ Atencion a alumnos:
 
 ---
 
-## Objetivo del curso
+## Objetivos del curso
 
-Comprender los fundamentos de los modelos actuariales para medir riesgos asociados con portafolios de seguros, ası́ como las herramientas estadı́sticas necesarias para incorporar la información previa en un proceso de aprendizaje y previsión de riesgos. Entender las nociones de teorı́a, medición y previsión de riesgos operacionales en seguros.
+Comprender los fundamentos de los modelos actuariales para medir riesgos asociados con portafolios de seguros, asi como las herramientas estadisticas necesarias para incorporar la informacion previa en un proceso de aprendizaje y prevision de riesgos. Entender las nociones de teoria, medicion y prevision de riesgos operacionales en seguros.
 
 --- 
 
@@ -36,7 +36,7 @@ Comprender los fundamentos de los modelos actuariales para medir riesgos asociad
 
 * Algebra superior y algebra matricial a nivel licenciatura. 
 
-* Calculo de probabilidades y estadistica matem谩tica.
+* Calculo de probabilidades y estadistica matematica.
 
 * _Manipulacion de datos y uso de librerias estandar en R ([R-project](https://www.r-project.org/))._
 
@@ -62,7 +62,7 @@ Los temas contemplados son los siguientes:
 
 En la seccion [[Notebook]](https://github.com/JCMO-ITAM/act11302_2019a_carpeta/tree/master/Notebook) encontraran las presentaciones y material complementario del curso. 
 
-La compilacion de los archivos `*.Rmd` hace uso de `[svm-r-markdown-templates](https://github.com/svmiller/svm-r-markdown-templates)`. En el archivo [Readme.md](https://github.com/JCMO-ITAM/act11302_2019a_carpeta/blob/master/svm-r-sources/README.md) de la carpeta [svm-r-sources](https://github.com/JCMO-ITAM/act11302_2019a_carpeta/blob/master/svm-r-sources/) describo como compilar los documentos. Si no desean hacer uso de estos templetes, pueden copiar el contenido de los archivos de las presentaciones en un documento `markdown` estandar.
+La compilacion de los archivos `*.Rmd` hace uso de [svm-r-markdown-templates](https://github.com/svmiller/svm-r-markdown-templates). En el archivo [README.md](https://github.com/JCMO-ITAM/act11302_2019a_carpeta/blob/master/svm-r-sources/README.md) de la carpeta [svm-r-sources](https://github.com/JCMO-ITAM/act11302_2019a_carpeta/blob/master/svm-r-sources/) describo las dependencias y como compilar los documentos. Si no desean hacer uso de estos templetes, pueden copiar el contenido de los archivos de las presentaciones en un documento `markdown` estandar y compilarlo usando `R` y `RStudio` solamente.
 
 ---
 
@@ -72,9 +72,9 @@ Debido a la alta carga analitica en `R` que involucra el curso, sera altamente b
 
 ---
 
-## Bibliografía
+## Bibliografia
 
-En la carpeta [Bibliografia](https://github.com/JCMO-ITAM/act11302_2019a_carpeta/tree/master/Bibliografia) Encontraran las referencias del curso en formato PDF. Todas estas referencias estan dispoinibles en la Biblioteca Raúl Baìlleres.
+En la carpeta [Bibliografia](https://github.com/JCMO-ITAM/act11302_2019a_carpeta/tree/master/Bibliografia) Encontraran las referencias del curso en formato PDF. Todas estas referencias estan dispoinibles en la Biblioteca Raul Bailleres.
 
 * Deelstra & Plantin (2014). *Risk Theory and Reinsurance*. Springer.
 
@@ -90,7 +90,7 @@ En la carpeta [Bibliografia](https://github.com/JCMO-ITAM/act11302_2019a_carpeta
 
 ---
 
-## Evaluación
+## Evaluacion
 
 * Examen parcial 1 (temas 1-4): **25%**
 
@@ -100,7 +100,7 @@ En la carpeta [Bibliografia](https://github.com/JCMO-ITAM/act11302_2019a_carpeta
 
 * Examen final: **25%**
 
-**A lo largo del semestre elaboraremos ejercicios entregables que serviran como apoyo en el proceso de aprendizaje del curso. Estos ejercicios con sus soluciones las encontraran en la seccion** [[Tareas]](https://github.com/JCMO-ITAM/act11302_2019a_carpeta/tree/master/Tareas).
+*A lo largo del semestre elaboraremos ejercicios entregables que serviran como apoyo en el proceso de aprendizaje del curso. Estos ejercicios con sus soluciones las encontraran en la seccion* [[Tareas]](https://github.com/JCMO-ITAM/act11302_2019a_carpeta/tree/master/Tareas).
 
 ---
 
