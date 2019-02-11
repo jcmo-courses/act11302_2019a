@@ -106,11 +106,11 @@ En la carpeta [Bibliografia](https://github.com/JCMO-ITAM/act11302_2019a_carpeta
 
 ## Fechas importantes
 
-* Examen parcial 1: Jueves 21 de febrero
+* Examen parcial 1: **Jueves 21 de febrero**
 
 * Examen parcial 2: Jueves 4 de abril
 
-* Proyecto pr¨¢ctico: Jueves 16 de mayo
+* Proyecto practico: Jueves 16 de mayo
 
 * Examen final: 18 de mayo-1 de junio
 
