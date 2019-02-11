@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1548507595776.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "3565149891",
+    "id" : "1462B726",
+    "lastKnownWriteTime" : 1548507614,
+    "last_content_update" : 1548507614121,
+    "path" : "~/svm-r-sources/svm-rmarkdown-anon-ms-example.Rmd",
+    "project_path" : "svm-rmarkdown-anon-ms-example.Rmd",
+    "properties" : {
+        "cursorPosition" : "33,0",
+        "scrollLine" : "0"
+    },
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}

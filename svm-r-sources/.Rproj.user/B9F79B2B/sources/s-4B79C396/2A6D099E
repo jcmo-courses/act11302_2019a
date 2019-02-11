@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1548416421392.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2145818737",
+    "id" : "2A6D099E",
+    "lastKnownWriteTime" : 1548416439,
+    "last_content_update" : 1548416439131,
+    "path" : "~/svm-sources/svm-rmarkdown-cv.Rmd",
+    "project_path" : "svm-rmarkdown-cv.Rmd",
+    "properties" : {
+        "cursorPosition" : "4,27",
+        "scrollLine" : "0"
+    },
+    "relative_order" : 5,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}

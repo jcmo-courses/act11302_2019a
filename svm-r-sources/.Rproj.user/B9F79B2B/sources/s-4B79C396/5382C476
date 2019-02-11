@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1548416468407.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "5382C476",
+    "lastKnownWriteTime" : 1548416483,
+    "last_content_update" : 1548416483259,
+    "path" : "~/svm-sources/svm-rmarkdown-syllabus-example.Rmd",
+    "project_path" : "svm-rmarkdown-syllabus-example.Rmd",
+    "properties" : {
+        "cursorPosition" : "29,0",
+        "scrollLine" : "22"
+    },
+    "relative_order" : 6,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}

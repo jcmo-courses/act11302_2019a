@@ -1,0 +1,306 @@
+---
+title: "Sesion 03 - Inferencia en distribuciones tipo mixtas - Parte 1"
+author: "Juan Carlos Martinez Ovando"
+date: "February 5, 2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+Objetivo
+---
+
+* Estudiar las implicaciones de la `propiedad de separacion` en el proceso inferencia tipo mixto.
+
+* Incorporar `datos` en el proceso inferencial.
+
+* Incorporar `datos` e `informacion complementaria` en el proceso inferencial.
+
+Preambulo
+---
+
+Seguimos considerando la clase de modelos tipo mixto con soporte en $\mathcal{X}=\{0\}\cup (0,\infty)$, y "densidad" dada por 
+$$
+f(x|\theta_0,\theta_c)=\theta_0 \mathbb{I}(x=0)+(1-\theta_0)\theta_c\exp\{-\theta_c x\}\mathbb{I}(x>0).
+$$
+Como vimos, esta clase de modelos puede verse como una composicion considerando la variable auxiliar
+$$
+Z=\begin{cases}
+1, \text{ si } x=0 \text{, con probabilidad } \theta_0,\\
+0, \text{ si } x>0 \text{, con probabilidad } (1-\theta_0).\\
+\end{cases}
+$$
+
+Problema inferencial
+---
+
+Si consideramos un conjunto de `datos` dado por una coleccion de $J$ observaciones/polizas que toman valores en $\mathcal{X}$, digamos
+$$
+\text{datos}=\{x_1,\ldots,x_J\},
+$$
+tendremos el **objetivo** de encontrar los valores de 
+$$
+\theta_0\text{ y }\theta_c,
+$$
+que **sean mas compatibles con los datos**.
+
+> \textcolor{blue}{Recordemos que como $x_i\in\mathcal{X}$, esperaremos que varios $x_i$s compartan el valor $0$.}
+
+Datos
+---
+Consideremos los datos reales de la empresa **AllState** de un portafolio de seguros de autos. 
+
+Cargamos los datos desde un repositorio en GitHUb (en este caso, el repositorio de datos de nuestro curso, referido como `JCMO-ITAM/Data4Analysis`). Para esto, empleamos en RStudio el paquete `repmis`. El diccionario de datos se encuentra en el mismo repositorio.
+
+```
+if(!require("repmis")){install.packages("repmis")}
+library("repmis")
+
+data <- source_data("https://github.com/JCMO-ITAM/Data4Analysis/blob/master/d4a_allstateclaim_data.csv?raw=true")
+```
+
+Resumen
+---
+
+Los `datos` incluyen las siguientes variables:
+
+```{r dataload, echo=FALSE}
+if(!require("repmis")){install.packages("repmis")}
+library("repmis")
+
+data <- source_data("https://github.com/JCMO-ITAM/Data4Analysis/blob/master/d4a_allstateclaim_data.csv?raw=true")
+
+data <- as.data.frame(data)
+colnames(data)
+data <- data[which(data$Calendar_Year==2005),]
+```
+
+La variable `Claim_Amount` representa el monto de reclamo individual, nuestros valores $x_i$.
+
+Los casos `Claim_Amount==0` representan no siniestro en la poliza correspondiente. 
+
+$J$ es el numero de polizas en los `datos`, y $n$ es el numero de polizas con no siniestro.
+
+```{r summary1, echo=FALSE}
+J <- nrow(data)
+n0 <- nrow(as.matrix(which(data$Claim_Amount==0)))
+J;n0
+```
+
+Verosimilitud
+---
+
+La funcion de verosimilitud para $(\theta_0,\theta_c)$ con base en los datos es (bajo el supuesto `iid`),
+\begin{eqnarray}
+lik(\theta_0,\theta_c|\text{datos}) 
+& = &
+\prod_{i=1}^{J}f(x_i|\theta_0,\theta_c) \nonumber \\
+& = &
+\prod_{x_i:x_i=1}^{J}\theta_0 \times \prod_{x_i:x_i>0}(1-\theta_0)\theta_c\exp\{-\theta_c x_i\} \nonumber \\
+& = &
+\theta_0^{n_0} \times (1-\theta_0)^{J-n_0}\theta_c^{J-n_0}\exp\{-\theta_c \sum_{x_i:x_i>0}x_i\}, \nonumber
+\end{eqnarray}
+donde 
+$$
+n_0=\#\{ x_i: x_i=0\}.
+$$
+
+Comentarios
+---
+
+1. Noten que el componente $$\theta_0^{n_0} \times (1-\theta_0)^{J-n_0},$$ resume la informacion en los datos para $\theta_0$.
+
+2. Noten que el componente $$\theta_c^{J-n_0}\exp\left\{-\theta_c \sum_{x_i:x_i>0}x_i\right\},$$ resume la informacion para $\theta_c$.
+
+3. Ambas informacion son `separadas` pero `no ajenas`. Por esto, podemos hacer inferencia sobre $\theta_0$ y $\theta_c$ por `separado`.
+
+Maxima verosimilitud I
+---
+
+Encontrar el EMV para $\theta_0$ con base en los `datos` es relativamente simple, es dado por
+\begin{eqnarray}
+  \theta_0^{*}
+  & = &
+  \arg\max_{(0,1)} \theta_0^{n_0} \times (1-\theta_0)^{J-n_0} \nonumber \\
+  & = &
+  \frac{n_0}{J}. \nonumber
+\end{eqnarray}
+
+En el caso de los datos **AllState** es
+```{r}
+theta0_star <- n0/J
+theta0_star
+```
+
+Error epistemico I
+---
+
+```{r likelihhod, echo=FALSE}
+theta0 <- seq(.001, .999, .001)
+lik_theta0 <- dbeta(theta0, 1 + n0, 1 + (J-n0) )
+
+plot(theta0, lik_theta0, xlim=c(0,1), ylim=c(0, 1.25 * max(lik_theta0,1.6)), 
+     type = "l", ylab= "Verosimilitud", lty = 3,
+     xlab= "theta_0", las=1, main="",lwd=2,
+     cex.lab=1.5, cex.main=1.5, col = "darkorange", axes=FALSE)
+axis(1, at = seq(0,1,.2)) #adds custom x axis
+axis(2, las=1) # custom y axis
+```
+
+Reflexion
+---
+
+* Aunque pareciera ser contundente, ?`es conveniente considerar solamente la informacion de estos "datos"? 
+
+Informacion complementaria
+---
+
+Pensemos el caso en que informacion del siguiente tipo es disponible:
+
+* (A). Creemos que la mediana de la incidencia de siniestros es $0.85$.
+
+* (B). Creemos que el $99.999$-esimo porcentil de la incidencia de siniestros es $0.95$.
+
+* (C). Creemos que el porcentil $0.001$ de la incidencia de siniestros es $0.60$.
+
+```{r infocompl, include=FALSE}
+quantile1 <- list(p=0.5, x=0.85)    # Complemento A
+quantile2 <- list(p=0.99999,x=0.95) # Complemento B
+quantile3 <- list(p=0.00001,x=0.60) # Complemento C
+```
+
+\textcolor{blue}{Esta informacion complementaria resume la informacion de expertos / instituciones reguladoras / mercado / etc.}
+
+```{r infocompl_code, include=FALSE}
+beta.elicitacion <- function(quantile1,quantile2,quantile3){
+  quantile1_p <- quantile1[[1]]; quantile1_q <- quantile1[[2]]
+  quantile2_p <- quantile2[[1]]; quantile2_q <- quantile2[[2]]
+  quantile3_p <- quantile3[[1]]; quantile3_q <- quantile3[[2]]
+  
+  priorA <- beta.select(quantile1,quantile2)
+  priorA_a <- priorA[1]; priorA_b <- priorA[2]
+  
+  priorB <- beta.select(quantile1,quantile3)
+  priorB_a <- priorB[1]; priorB_b <- priorB[2]
+  
+  diff_a <- abs(priorA_a - priorB_a); diff_b <- abs(priorB_b - priorB_b)
+  step_a <- diff_a / 100; step_b <- diff_b / 100
+  if (priorA_a < priorB_a) { start_a <- priorA_a; end_a <- priorB_a }
+  else                     { start_a <- priorB_a; end_a <- priorA_a }
+  if (priorA_b < priorB_b) { start_b <- priorA_b; end_b <- priorB_b }
+  else                     { start_b <- priorB_b; end_b <- priorA_b }
+  steps_a <- seq(from=start_a, to=end_a, length.out=1000)
+  steps_b <- seq(from=start_b, to=end_b, length.out=1000)
+  max_error <- 10000000000000000000
+  best_a <- 0; best_b <- 0
+  for (a in steps_a)
+  {
+    for (b in steps_b)
+    {
+      priorC_q1 <- qbeta(c(quantile1_p), a, b)
+      priorC_q2 <- qbeta(c(quantile2_p), a, b)
+      priorC_q3 <- qbeta(c(quantile3_p), a, b)
+      priorC_error <- abs(priorC_q1-quantile1_q) +
+        abs(priorC_q2-quantile2_q) +
+        abs(priorC_q3-quantile3_q)
+      if (priorC_error < max_error)
+      {
+        max_error <- priorC_error; best_a <- a; best_b <- b
+      }
+    }
+  }
+  print(paste("Elicitacion para a=",best_a,"b=",best_b))
+  }
+
+
+if(!require("LearnBayes")){install.packages("LearnBayes")}
+library("LearnBayes")
+```
+
+Visualizacion de elicitacion
+---
+
+```{r betaelicitacion, echo=FALSE}
+beta.elicitacion(quantile1,quantile2,quantile3)
+
+curve(dbeta(x,52.22,9.52105105105105))
+```
+
+Consolidacion de informacion
+---
+
+La informacion contenida en los `datos` y `complementaria` se **consolida** en la siguiente expresion
+$$
+q(\theta_0|\text{datos},\text{complemento}) \propto lik(\theta_0|\text{datos}) \times q(\theta_0|\text{complemento}).
+$$
+
+Resulta ser que si $q(\theta_0|\text{complemento})$ es una medida de probabilidad, la funcion $q(\theta_0|\text{datos},\text{complemento})$ tambien lo es.
+
+En este caso, tal condicion se cumple, pues $q(\theta_0|\text{complemento})$ se elicito siendo parte de la familia de distribuciones beta. 
+
+La funcion $q(\theta_0|\text{complemento})$ se refiere a la **prior** del modelo en el contexto bayesiano de inferencia.
+
+```{r consolidadcion_code, include=FALSE}
+consolidacion.binomialbeta <- function(successes, total, a, b, print=TRUE,summary=TRUE){
+  likelihood_a = successes + 1; likelihood_b = total - successes + 1
+  posterior_a = a + successes;  posterior_b = b + total - successes
+  theta = seq(0.005, 0.995, length = 500)
+  prior = dbeta(theta, a, b)
+  likelihood = dbeta(theta, likelihood_a, likelihood_b)
+  posterior  = dbeta(theta, posterior_a, posterior_b)
+  m = max(c(prior, likelihood, posterior))
+  if(print==TRUE){
+    plot(theta, posterior, type = "l", ylab = "Density", lty = 2, lwd = 3,
+       main = paste("beta(", a, ",", b, ") prior, B(", total, ",", successes, ") data,",
+                    "beta(", posterior_a, ",", posterior_b, ") posterior"), ylim = c(0, m), col = "red")
+    lines(theta, likelihood, lty = 1, lwd = 3, col = "blue")
+    lines(theta, prior, lty = 3, lwd = 3, col = "green")
+    legend(x=0.8,y=m, c("Prior", "Likelihood", "Posterior"), lty = c(3, 1, 2),
+         lwd = c(3, 3, 3), col = c("green", "blue", "red"))
+  }
+  if(summary==TRUE){
+  calcBetaMode <- function(aa, bb) { BetaMode <- (aa - 1)/(aa + bb - 2); return(BetaMode); }
+  calcBetaMean <- function(aa, bb) { BetaMean <- (aa)/(aa + bb); return(BetaMean); }
+  calcBetaSd   <- function(aa, bb) { BetaSd <- sqrt((aa * bb)/(((aa + bb)^2) * (aa + bb + 1))); return(BetaSd); }
+  prior_mode      <- calcBetaMode(a, b)
+  likelihood_mode <- calcBetaMode(likelihood_a, likelihood_b)
+  posterior_mode  <- calcBetaMode(posterior_a, posterior_b)
+  prior_mean      <- calcBetaMean(a, b)
+  likelihood_mean <- calcBetaMean(likelihood_a, likelihood_b)
+  posterior_mean  <- calcBetaMean(posterior_a, posterior_b)
+  prior_sd        <- calcBetaSd(a, b)
+  likelihood_sd   <- calcBetaSd(likelihood_a, likelihood_b)
+  posterior_sd    <- calcBetaSd(posterior_a, posterior_b)
+  print(paste("Modas=",prior_mode," | ",likelihood_mode," | ",posterior_mode))
+  print(paste("Medias=",prior_mean," | ",likelihood_mean," | ",posterior_mean))
+  print(paste("sd s=",prior_sd," | ",likelihood_sd," | ",posterior_sd))
+  }
+}
+```
+
+Visualizacion de consolidacion
+---
+
+```{r}
+consolidacion.binomialbeta(n0, J, 52.22, 9.52,print=TRUE,summary=FALSE)
+```
+
+Error epistemico II
+---
+
+```{r}
+consolidacion.binomialbeta(n0, J, 52.22, 9.52,print=FALSE,summary=TRUE)
+```
+
+
+Ejercicio
+---
+
+1. Seleccionen una submuestra aleatoria del 10\% de los `datos`.
+
+2. Replique los calculos usando los datos de la submuestra aleatoria.
+
+3. Reflexione acerca de los **estimadores puntuales**, el **error epistemico** y relevancia de la **informacion complementaria**.

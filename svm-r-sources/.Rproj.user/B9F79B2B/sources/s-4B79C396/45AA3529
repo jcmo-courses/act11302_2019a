@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1548414263296.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "45AA3529",
+    "lastKnownWriteTime" : 1548414313,
+    "last_content_update" : 1548414313477,
+    "path" : "~/svm-sources/svm-xaringan-example.Rmd",
+    "project_path" : "svm-xaringan-example.Rmd",
+    "properties" : {
+        "cursorPosition" : "21,18",
+        "scrollLine" : "21"
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}

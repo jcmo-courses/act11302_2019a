@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1548507510521.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "3014428616",
+    "id" : "2AC3DE44",
+    "lastKnownWriteTime" : 1548507569,
+    "last_content_update" : 1548507569552,
+    "path" : "~/svm-r-sources/svm-rmarkdown-beamer-example.Rmd",
+    "project_path" : "svm-rmarkdown-beamer-example.Rmd",
+    "properties" : {
+        "cursorPosition" : "15,34",
+        "scrollLine" : "0"
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}

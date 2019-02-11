@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1548414728043.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "3710471954",
+    "id" : "93962949",
+    "lastKnownWriteTime" : 1548414949,
+    "last_content_update" : 1548414949516,
+    "path" : "~/svm-sources/svm-rmarkdown-ioslides-example.Rmd",
+    "project_path" : "svm-rmarkdown-ioslides-example.Rmd",
+    "properties" : {
+        "cursorPosition" : "10,36",
+        "scrollLine" : "0"
+    },
+    "relative_order" : 3,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}

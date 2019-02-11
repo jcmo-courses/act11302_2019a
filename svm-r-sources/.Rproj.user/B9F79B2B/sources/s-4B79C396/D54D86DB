@@ -1,0 +1,23 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1548415298894.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "1841183328",
+    "id" : "D54D86DB",
+    "lastKnownWriteTime" : 1548416336,
+    "last_content_update" : 1548416336150,
+    "path" : "~/svm-sources/svm-rmarkdown-article-example.Rmd",
+    "project_path" : "svm-rmarkdown-article-example.Rmd",
+    "properties" : {
+        "cursorPosition" : "215,0",
+        "docOutlineVisible" : "1",
+        "scrollLine" : "209"
+    },
+    "relative_order" : 4,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}
