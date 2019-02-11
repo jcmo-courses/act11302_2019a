@@ -26,73 +26,55 @@ Atencion a alumnos:
 
 ## Objetivo del curso
 
-En este curso estudiaremos el uso de los m茅todos estad铆sticos aplicados en el an谩lisis de modelos de p茅rdida agregada en seguros. 
-Para tal efecto, estudiaremos las propiedades matem谩ticas de los modelos de p茅rdida agregada, y estudiaremos en particular el 
-uso de los m茅todos estad铆sticos con una perspectiva predictiva referente a los paradigmas frecuentistas y bayesianos.
+Comprender los fundamentos de los modelos actuariales para medir riesgos asociados con portafolios de seguros, ası́ como las herramientas estadı́sticas necesarias para incorporar la información previa en un proceso de aprendizaje y previsión de riesgos. Entender las nociones de teorı́a, medición y previsión de riesgos operacionales en seguros.
 
 --- 
 
 ## Prerequisitos
 
-* Conocimiento de c谩lculo en una y varias dimensiones (integraci贸n, diferenciaci贸n y l铆mites) a nivel licenciatura. 
+* Conocimiento de calculo en una y varias dimensiones (integracion, diferenciacion y limites) a nivel licenciatura. 
 
 * Algebra superior y algebra matricial a nivel licenciatura. 
 
-* C谩lculo de probabilidades y estad铆stica matem谩tica.
+* Calculo de probabilidades y estadistica matem谩tica.
 
-* _Manipulaci贸n de datos y uso de paqueter铆a est谩ndar en R ([R-project](https://www.r-project.org/))._
+* _Manipulacion de datos y uso de librerias estandar en R ([R-project](https://www.r-project.org/))._
 
 ---
 
-## Organizaci贸n tem谩tica
+## Organizacion tematica
 
-Organizaremos el curso en 16 sesiones tem谩ticas (una por cada una de las semanas activas del curso en el semestre). Apartaremos dos sesiones para evaluaciones presenciales.
+Organizaremos el curso en 16 sesiones tematicas (una por cada una de las semanas activas del curso en el semestre). Apartaremos dos sesiones para evaluaciones presenciales.
 
 Los temas contemplados son los siguientes:
 
-1. Introducci贸n [[Presentaci贸n]](https://github.com/jcmartinezovando/act11302/blob/master/Cuadernos/act11302_s01_introduccion.pdf) [[Flashcards]](https://github.com/jcmartinezovando/act11302/blob/master/Cuadernos/act11302_s01_flashcards.pdf)
+1. Probabilidad e Inferencia Estadistica (Revision)
 
-2. Modelos en seguros y uso de m茅todos estad铆sticos [[Presentaci贸n Parte 1]](https://github.com/jcmartinezovando/act11302/blob/master/Cuadernos/act11302_s02_modelos+inferencia_parte1.pdf)  [[Presentaci贸n Parte 2]](https://github.com/jcmartinezovando/act11302/blob/master/Cuadernos/act11302_s02_modelos+inferencia_parte2.pdf)
+2. Introduccion a los Modelos Actuariales de Perdida Agregada
 
-3. Perspectiva desagregada de los modelos de p茅rdida [[Presentaci贸n Parte 1]](https://github.com/jcmartinezovando/act11302/blob/master/Cuadernos/act11302_s03_modelosagregados_parte1.pdf) [[Script Parte 1]](https://github.com/jcmartinezovando/act11302/blob/master/Cuadernos/act11302_s03_modelosagregados_parte1.R) [[Presentaci贸n Parte 2]](https://github.com/jcmartinezovando/act11302/blob/master/Cuadernos/act11302_s03_modelosagregados_parte2.pdf)
+3. Distribuciones para la Frecuencia de Siniestros
 
-4. Modelos de riesgo individual: Modelaci贸n frecuentista [[Presentaci贸n Parte 1]](https://github.com/jcmartinezovando/act11302/blob/master/Cuadernos/act11302_s04_frecuenciasiniestros_parte1.pdf)
- [[Script Parte 1]](https://github.com/jcmartinezovando/act11302/blob/master/Cuadernos/act11302_s04_frecuenciasiniestros_parte1.R) [[Presentaci贸n Parte 2]](https://github.com/jcmartinezovando/act11302/blob/master/Cuadernos/act11302_s04_frecuenciasiniestros_parte2.pdf) [[Presentaci贸n Parte 3]](https://github.com/jcmartinezovando/act11302/blob/master/Cuadernos/act11302_s04_frecuenciasiniestros_parte3.pdf)
+4. Distribuciones para las Severidades Individuales
 
+5. Modelos de Perdida Agregada
 
-5. Modelos de riesgo individual: Modelaci贸n bayesiana [[Presentaci贸n Parte 4]](https://github.com/jcmartinezovando/act11302/blob/master/Cuadernos/act11302_s04_frecuenciasiniestros_parte4.pdf) [[Presentaci贸n AllState]](https://github.com/jcmartinezovando/act11302/blob/master/Cuadernos/act11302_s05_allstate_parte1a.pdf)
+6. Riesgo y Teoria de Ruina
 
-6. Modelos de riesgo colectivo: Modelaci贸n frecuentista
+En la seccion [[Notebook]](https://github.com/JCMO-ITAM/act11302_2019a_carpeta/tree/master/Notebook) encontraran las presentaciones y material complementario del curso. 
 
-7. Modelos de riesgo colectivo: Modelaci贸n bayesiana
+La compilacion de los archivos `*.Rmd` hace uso de `[svm-r-markdown-templates](https://github.com/svmiller/svm-r-markdown-templates)`. En el archivo [Readme.md](https://github.com/JCMO-ITAM/act11302_2019a_carpeta/blob/master/svm-r-sources/README.md) de la carpeta [svm-r-sources](https://github.com/JCMO-ITAM/act11302_2019a_carpeta/blob/master/svm-r-sources/) describo como compilar los documentos. Si no desean hacer uso de estos templetes, pueden copiar el contenido de los archivos de las presentaciones en un documento `markdown` estandar.
 
-8. **Examen parcial 1**
+---
 
-9. Modelos de valores extremos para severidades: Definici贸n y propiedades
+## Recuros adicionales
 
-10. Modelos de valores extremos para severidades: Inferencia
-
-11. Comparaci贸n y selecci贸n de modelos
-
-12. **Examen parcial 2**
-
-13. Primas de riesgo: Definiciones y estimaci贸n
-
-14. Aplicaciones
-
-15. Teor铆a de ruina: Definci贸n y propiedades
-
-16. Teor铆a de ruina: Modelaci贸n y predicci贸n
-
-17. Temas avanzados
-
-Revisen el [calendario del curso](https://github.com/jcmartinezovando/act11302/blob/master/act11302_2018b_calendario.pdf).
+Debido a la alta carga analitica en `R` que involucra el curso, sera altamente beneficioso desarrollar habilidades en esta herramienta. Con este proposito, he creado el grupo de trabajo [Calculo Actuarial III](https://www.datacamp.com/enterprise/calculo-actuarial-iii) en [DataCamp](https://www.datacamp.com/), donde he disenado un track de cursos gratuitos para estudiantes de este curso con miras a desarrollar estas herramientas.
 
 ---
 
 ## Bibliografía
 
-En la carpeta [Bibliografia]() Encontraran las referencias del curso en formato PDF. Todas estas referencias est+an dispoinibles en la Biblioteca Raúl Baìlleres.
+En la carpeta [Bibliografia](https://github.com/JCMO-ITAM/act11302_2019a_carpeta/tree/master/Bibliografia) Encontraran las referencias del curso en formato PDF. Todas estas referencias estan dispoinibles en la Biblioteca Raúl Baìlleres.
 
 * Deelstra & Plantin (2014). *Risk Theory and Reinsurance*. Springer.
 
@@ -118,6 +100,10 @@ En la carpeta [Bibliografia]() Encontraran las referencias del curso en formato 
 
 * Examen final: **25%**
 
+**A lo largo del semestre elaboraremos ejercicios entregables que serviran como apoyo en el proceso de aprendizaje del curso. Estos ejercicios con sus soluciones las encontraran en la seccion** [[Tareas]](https://github.com/JCMO-ITAM/act11302_2019a_carpeta/tree/master/Tareas).
+
+---
+
 ## Fechas importantes
 
 * Examen parcial 1: Jueves 21 de febrero
@@ -128,17 +114,16 @@ En la carpeta [Bibliografia]() Encontraran las referencias del curso en formato 
 
 * Examen final: 18 de mayo-1 de junio
 
-
 ---
 
 ## Material complementario
 
 * Lista de ejercicios [[Link]](https://github.com/jcmartinezovando/act11302/blob/master/Complementarios/act11302_2018b_listaejercicios.pdf)
 
-* Introducci贸n a R [[Link]](https://cran.r-project.org/doc/contrib/R-intro-1.1.0-espanol.1.pdf)
+* Introduccion a R [[Link]](https://cran.r-project.org/doc/contrib/R-intro-1.1.0-espanol.1.pdf)
 
-* Introducci贸n a RStudio [[Link]](http://webcache.googleusercontent.com/search?q=cache:pA1vwDGajEIJ:wpd.ugr.es/~bioestad/wp-content/uploads/Instalaci%25C3%25B3n-e-introducci%25C3%25B3n-a-R-RStudio-y-R-Commander.pdf+&cd=11&hl=en&ct=clnk&gl=mx&client=firefox-b-ab)
+* Introduccion a RStudio [[Link]](http://webcache.googleusercontent.com/search?q=cache:pA1vwDGajEIJ:wpd.ugr.es/~bioestad/wp-content/uploads/Instalaci%25C3%25B3n-e-introducci%25C3%25B3n-a-R-RStudio-y-R-Commander.pdf+&cd=11&hl=en&ct=clnk&gl=mx&client=firefox-b-ab)
 
-* Introducci贸n a Github [[Link]](http://conociendogithub.readthedocs.io/en/latest/data/introduccion/)
+* Introduccion a Github [[Link]](http://conociendogithub.readthedocs.io/en/latest/data/introduccion/)
 
 * *Construction and Evaluation of Actuarial Models (SOA Exam C) - Past examns w/ solutions* [[Link]](https://www.soa.org/education/exam-req/syllabus-study-materials/edu-multiple-choice-exam.aspx)
