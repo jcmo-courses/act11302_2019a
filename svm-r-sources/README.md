@@ -1,4 +1,4 @@
-# SVM-r-Sources
+# svm-R-sources
 
 Esta es una coleccion de turinas para compilar documentos con formato LaTeX y Markdown desde RStudio.
 
