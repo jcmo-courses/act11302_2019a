@@ -1,0 +1,456 @@
+---
+title: ACT-11302 Calculo Actuarial III
+subtitle: Sesion 07 - Distribuciones para la frecuencia de siniestros 2/
+author: Juan Carlos Martinez-Ovando
+institute: Departamento Academico de Actuaria y Seguros
+titlegraphic: /svm-r-sources/ITAM2016.png
+fontsize: 10pt
+output:
+ beamer_presentation:
+    template: ~/svm-r-sources/svm-latex-beamer.tex
+    keep_tex: true
+# toc: true
+    slide_level: 2
+ ioslides_presentation:
+    smaller: true
+    logo: ~/svm-r-sources/ITAM2016.png
+make149: true
+---
+
+<style>
+slides > slide.backdrop {
+  background: white;
+  border-bottom: 0px;
+  box-shadow: 0 0 0;
+}
+
+
+slides > slide {
+  font-family: 'Open Sans', Helvetica, Arial, sans-serif;
+  border-bottom: 3px solid  #F66733;
+  box-shadow:  0 3px 0 #522D80;
+
+}
+
+.title-slide hgroup h1 {
+  color: #522D80;
+}
+
+h2 {
+
+  color: #522D80;
+}
+
+slides > slide.dark {
+  background: #522D80 !important;
+  border-bottom: 0;
+  box-shadow: 0 0 0;
+}
+
+.segue h2 {
+  color: white;
+}
+
+slides > slide.title-slide {
+  border-bottom: 0;
+  box-shadow: 0 0 0;
+}
+
+ol, ul {
+
+padding-bottom: 10px;
+
+}
+
+</style>
+
+
+# Objetivos
+
+Objetivos
+---
+
+* Estudiaremos algunas conexiones entre las distribuciones de frecuencias de siniestros.
+
+* Estudiaremos aspectos de temporalidad en la especificacion de estas distribuciones.
+
+# Preambulo
+
+Frecuencia de Siniestros
+---
+
+En esta seccion consideramos que estamos trabajando con la especificacion del **numero/frecuencia de siniestros**, $N$, donde 
+$$
+N=\sum_{j=1}^{J}\iota_{j},
+$$
+donde $J$ es el tamanio de suscripcion del portafolio de seguros, y $\iota_j$ es el la indicadora de siniestros de la poliza $j$-esima.
+
+En esta sesion prestaremos atencion a algunos modelos de probabilidad empleados para describir la incertidumbre entorno a $N$. 
+
+*Posteriormente analizaremos la modelacion de las severidades/monto de siniestros individuales.*
+
+1. Distribucion binomial
+---
+
+Se dice que $N$ sigue una distribucion binomial, $Bin(n|J,\theta)$, cuando
+\begin{eqnarray}
+  \mathbb{E}(N) & = & J\theta
+  \nonumber \\
+  var(N) & = & J\theta(1-\theta)
+  \nonumber \\
+  M_{N}(t) & = & \left(\theta e^{t}+1-\theta\right)^{J}
+  \nonumber \\
+  P_{N}(t) & = & \left(\theta t+1-\theta\right)^{J}.
+  \nonumber
+\end{eqnarray}
+
+El parametro $0<\theta<1$ se interpreta como $\mathbb{P}(\text{siniestro})$ para cualquier poliza dentro del portafolio de seguros, referente al periodo de operacion.
+
+La distribucion binomial se usa en el contexto donde cada poliza en el portafiolio puede producir solo un reclamo dentro del periodo de operacion. 
+
+**Presupone que cada poliza puede siniestrase a lo mas solo una vez en el periodo de operaciones.**
+
+1. Binomial - Calculo y visualizacion
+---
+
+```{r binomial_plot, include=FALSE}
+Binomial.Plot <-function(n, p, low=0, high=n,scale = F, a=NA,b=NA,calcProb=!all(is.na(c(a,b))),quantile=NA,calcQuant=!is.na(quantile)){
+  # Binomial
+  sd = sqrt(n * p * (1 - p))
+  if(scale && (n > 10)) {
+    low = max(0, round(n * p - 4 * sd))
+    high = min(n, round(n * p + 4 * sd))
+  }
+  values = low:high
+  probs = dbinom(values, n, p)
+  plot(c(low,high), c(0,max(probs)), type = "n", 
+       xlab = "Numero de casos",
+       ylab = "Masa de probabilidad",
+       main = "")
+  lines(values, probs, type = "h", col = 2)
+  abline(h=0,col=3)
+  if(calcProb) {
+    if(is.na(a))
+      a = 0
+    if(is.na(b))
+      b = n
+    if(a > b) {
+      d = a
+      a = b
+      b = d
+    }
+    a = round(a)
+    b = round(b)
+    prob = pbinom(b,n,p) - pbinom(a-1,n,p)
+    title(paste("P(",a," <= N <= ",b,") = ",round(prob,6),sep=""),line=0,col.main=4)
+    u = seq(max(c(a,low)),min(c(b,high)),by=1)
+    v = dbinom(u,n,p)
+    lines(u,v,type="h",col=4)
+  }
+  else if(calcQuant==T) {
+    if(quantile < 0 || quantile > 1)
+      stop("El cuantil debe estar entre 0 y 1")
+    x = qbinom(quantile,n,p)
+    title(paste(" ",quantile," quantile = ",x,sep=""),line=0,col.main=4)
+    u = 0:x
+    v = dbinom(u,n,p)
+    lines(u,v,type="h",col=4)
+  }
+  return(invisible())
+}
+```
+
+```{r}
+Binomial.Plot(100,.3)
+```
+
+---
+
+```{r}
+Binomial.Plot(100,0.3,a=27,b=33,scale=T)
+```
+
+---
+
+Revisen la funcion `Binomial.Plot()` en el `markdown` de esta presentacion.
+
+2. Distribucion Poisson
+---
+
+La distribucion Poisson es quizas la distribucion de frecuencias de siniestros mas empleada en la practica y en la teoria.
+
+Se dice que $N$ se distribuye Poisson, $Po(n|\lambda)$ cuando,
+\begin{eqnarray}
+  \mathbb{E}(N) & = & \lambda
+  \nonumber \\
+  var(N) & = & \lambda
+  \nonumber \\
+  M_{N}(t) & = & \exp\left\{\lambda\left(e^{t}-1\right)\right\}
+  \nonumber \\
+  P_{N}(t) & = & \exp\left\{\lambda\left(t-1\right)\right\},
+  \nonumber
+\end{eqnarray}
+donde $\lambda$ es la tasa de intensidad de siniestros referente al periodo de operacion.
+
+Al igual que la distribucion binomial negativa, esta distribucion se emplea en el caso donde cada poliza dentro del portafolio de seguros puede producir mas de un siniestro en el periodo de operacion.
+
+**Esta dsitribucion presupone que cada poliza puede siniestrarse mas de una vez en el periodo de operaciones.**
+
+2. Poisson - Calculo y visualizacion
+---
+
+Revisen la funcion `Poisson.Plot()` en el `markdown` de esta presentacion.
+
+```{r poisson_plot, include=FALSE}
+Poisson.Plot <- function(mu, a=NA,b=NA,calcProb=(!is.na(a) | !is.na(b)),quantile=NA,calcQuant=!is.na(quantile)){
+  # Poisson
+  sd = sqrt(mu)
+  low = max(0, round(mu - 3 * sd))
+  high = round(mu + 5 * sd)
+  values = low:high
+  probs = dpois(values, mu)
+  plot(c(low,high), c(0,max(probs)), type = "n", 
+       xlab = "Numero de casos",
+       ylab = "Masas de probabilidad",
+       main = "")
+  lines(values, probs, type = "h", col = 2)
+  abline(h=0,col=3)
+  if(calcProb) {
+    if(is.na(a)){ a = 0 }
+    if(is.na(b)){
+      a = round(a)
+      prob = 1-ppois(a-1,mu)
+      title(paste("P(",a," <= Y ) = ",round(prob,6),sep=""),line=0,col.main=4)
+      u = seq(max(c(a,low)),high,by=1)
+    }
+    else {
+      if(a > b) {d = a; a = b; b = d;}
+      a = round(a); b = round(b)
+      prob = ppois(b,mu) - ppois(a-1,mu)
+      title(paste("P(",a," <= N <= ",b,") = ",round(prob,6),sep=""),line=0,col.main=4)
+      u = seq(max(c(a,low)),min(c(b,high)),by=1)
+    }
+    v = dpois(u,mu)
+    lines(u,v,type="h",col=4)
+  }
+  else if(calcQuant==T) {
+    if(quantile < 0 || quantile > 1)
+      stop("El cuantil debe estar entre 0 y 1")
+    x = qpois(quantile,mu)
+    title(paste("",quantile," quantile = ",x,sep=""),line=0,col.main=4)
+    u = 0:x
+    v = dpois(u,mu)
+    lines(u,v,type="h",col=4)
+  }
+  return(invisible())
+}
+```
+
+3. Distribucion binomial-negativa
+---
+
+Se dice que $N$ tiene una distribucion binomial negativa, $BinNeg(n|r,\theta)$ si
+\begin{eqnarray}
+  \mathbb{E}(N) & = & \frac{r(1-\theta)}{\theta}
+  \nonumber \\
+  var(N) & = & \frac{r(1-\theta)}{\theta^{2}}
+  \nonumber \\
+  M_{N}(t) & = & \left(\frac{\theta}{1-(1-\theta)e^{t}}\right)^{r}
+  \nonumber \\
+  P_{N}(t) & = & \left(\frac{\theta}{1-(1-\theta)t}\right)^{r},
+  \nonumber
+\end{eqnarray}
+para $r$ entero positivo y $0<\theta<1$.
+
+Esta distribucion se emplea en el caso de portafolios en los que cada polia puede producir mas de un reclamo dentro del periodo de operacion.
+
+**Esta dsitribucion presupone que cada poliza puede siniestrarse mas de una vez en el periodo de operaciones.**
+
+3. Binomial negativa - Calculo y visualizacion
+---
+
+Modifiquen la funcion `Poisson.Plot()` para crear la funcion `BinNeg.Plot()` para generar los resultados analogos de `Poisson.Plot()` y `Binomial.Plot()` incluidas en el `markdown` de esta presentacion.
+
+
+# Clase (a,b,0)
+
+Definicion
+---
+
+Las distribuciones `binomial`, `Poisson` y `binomial negativa` pueden expresarse como una clase de distribuciones mas general, con *decrementos exponenciales o tasas de cambio lineal* en las $(p_n)_{n\in\mathcal{N}}$. Esta clase es conocida como la **clase** $(a,b,0)$.
+	  	
+Las masas de probabilidades, $\Pr(N=n)=p_n$, en esta clase se definien de **manera recursiva**, como 
+$$
+\frac{p_n}{p_{n-1}} = a + \frac{b}{n},
+$$
+para $n=1,2,3,\ldots$.
+ 		
+El valor 
+$$
+p_0 := \Pr(N=0)
+$$
+se define como un parametro adicional inicial.
+ 	
+Soporte
+---
+
+El **soporte** de las distribuciones $(\alpha,\beta)$, para $\mathcal{N}$, es tipicamente un subconjunto de los enteros positivos, i.e. 
+$$
+\mathcal{N} 
+\subseteq
+\mathbb{N}_0=\{0\}\cup \{1,2,3,\ldots\}.
+$$
+		
+Sin embargo, puede definirse tambien sobre **latices**, que son soportes 
+$$
+\mathcal{K}=\{kn:n\in\mathcal{N}\},
+$$
+para algun escalar $k$
+
+Este se usa para definir **distribuciones de probabilidad sobre rangos** de variables --que es de utilidad para severidades individuales ranqueadas--.
+
+Usos
+---
+
+El uso de las distribuciones $(\alpha,\beta,0)$ se relaciona principalmente con las formulas de recursion (especificamente la recursion de Panjer) para calcular la distribucion de $S$, **monto agregado de distribuciones** (lo estudiaremos mas adelante).
+
+Relaciones
+---
+
+Los valores especificos de $(\alpha,\beta)$ y $p_0$ asociados con las distribuciones parametricas convencionales estan dados en la siguiente tabla.
+
+
+| Distribucion | $p_0$    | $\alpha$  | $\beta$  |
+|--------------|:--------:|:---------:|:--------:|
+| $\text{Po}(\cdot|\lambda)$        | $e^{-\lambda}$    | $0$ | $\lambda$ |
+| $\text{BinNeg}(\cdot|r,\theta)$   | $(1+\theta)^{-r}$ | $\frac{\theta}{1+\theta}$ | $r\left(\frac{\theta}{1+\theta}\right)$ |
+| $\text{Bin}(\cdot|J,\theta)$      | $(1-\theta)^{J}$  | $-\frac{\theta}{1-\theta}$ | $(J+1)\left(\frac{\theta}{1-\theta}\right)$ |
+
+
+El caso de la distribucion $\text{Geo}(\cdot|\theta)$ se deriva directamente del caso correspodiente en la tabla anterior.	
+
+Parametrizacion
+---
+
+![Caption for the picture.](./Figuras/ab0parametrizacion.png)
+
+Calculo y visualizacion
+---
+
+Vean la funcion `aboclass()` en `R`.
+
+```{r ab0_pmf, echo=TRUE}
+ab0class <- function(alpha, beta, pO, K){
+  ab0dist <- array(NA, dim=c(K+1,3))
+  ab0dist[,1] <- seq(0:K)-1
+  ab0dist[1,2] <- p0
+  k <- 1
+  for(k in 1:K){
+    ab0dist[(k+1),2] <- as.numeric(ab0dist[k,2] %*% (alpha + beta/k)) 
+    }
+  ab0dist[,3] <- cumsum(ab0dist[,2])
+  return(ab0dist)
+  }
+```
+
+Comparativo
+---
+
+```{r ab0_plot_comparacion, echo=FALSE}
+if(!require("ggplot2")){install.packages("ggplot2")}
+suppressMessages(library("ggplot2"))
+ggplot(data.frame(x=c(0:20)), aes(x)) +
+    geom_point(aes(y=dpois(x, 10)), colour="red", 
+               ylab = "masa de probabildad", xlab="N") +
+    geom_point(aes(y=dbinom(x, 100, 0.1)), colour="blue") +
+    geom_point(aes(y=dnbinom(x, 90, 0.9)), colour="green")
+```
+
+Comentarios
+---
+
+* En `azul` marcamos las masas de probabilidad de la `distribucion binomial`
+
+* En `verde` marcamos las masas de probabilidad de la `distribucion binomial-negativa`
+
+* En `rojo` marcamos las masas de probabilidad de la `distribucion Poisson`
+
+Asi, vemos que la distribucion `binomial negativa` es la *mas dispersa*, la `binomial` la *menos dispersa*. La distribucion `Poisson` esta entre ambas.
+
+Ejemplo: Poisson
+---
+
+```{r abo_plot_poisson, echo=FALSE}
+K <- 100
+alpha <- 0
+beta <- 30
+p0 <- exp(-beta)
+ab0dist <- ab0class(alpha, beta, pO, K)
+
+plot(ab0dist[,1],ab0dist[,2],type="h", ylab="P(N=n)", col=2, xlab="n", main="");abline(h=0:1,col=3)
+points(ab0dist[,1],ab0dist[,2],col=2);abline(h=0,col=3)
+```
+
+
+# Propiedades
+
+Poisson: Agregacion/desagregacion
+---
+
+**Agregacion:**
+Supongamos que $N_1,\ldots,N_q$ son variables aleatorias independientes con distribucion Poisson, $\text{Po}(N_j=n_j|\lambda_j)$, respectivamente, con $\lambda_j$s posiblemente diferentes. Se sigue,  
+	  	\begin{itemize}
+	  		\item $N = \sum_{j=1}^{q}N_j$ se distribuye Poisson
+	  		\item $N$ tiene tasa de intensidad $\lambda=\sum_{j=1}^{q}\lambda_j$
+	  	\end{itemize}
+	  	
+**Desagregacion:**
+Supongamos que $N \sim \text{Po}(n|\lambda)$, con $\lambda > 0$, y consideremos que los eventos pueden clasificarse en $m$ tipos distintos independientes, con probabilidades $p_1,\ldots,p_m$. Se sigue,
+	  	\begin{itemize}
+	  		\item $N_j$s, que son los numeros de eventos en cada clase, son mutuamente independientes
+	  		\item Cada $N_j$ tiene distribucion $\text{Po}(n|\lambda_j)$, con $\lambda_j=p_j\lambda$
+	  	\end{itemize}
+
+Binomial-negativa: Representacion tipo mezcla
+---
+
+Un modelo bastante util en la practica representar la `distribucion binomial-negativa` como una *mezcla de una distribucion Poisson*  respecto a una distribucion gamma, i.e.
+$$
+N|\lambda 
+\sim \text{Po}(n|\lambda),
+$$
+$$
+\lambda 
+\sim \text{Ga}(\lambda|a,b).
+$$	  	
+De esta forma,
+$$
+P(N=n)=\int_{0}^{\infty}\text{Po}(n|\lambda)\text{Ga}(\lambda|a,b)d\lambda.
+$$
+
+* Al representar la distribucion binomial negativa como una mezcla puede hacerse inferencia (bayesiana o frecuentista) de manera mas simple. Para esto, invocamos la nocion de *verosimilitud extendida*.
+
+> Esta representacion es originada por una **modificacion de la distribucion Poisson via mezclas.**
+
+# Tareas
+
+Tarea
+---
+
+1. Modifiquen la funcion `Poisson.Plot()` para crear la funcion `BinNeg.Plot()` para generar los resultados analogos de `Poisson.Plot()` y `Binomial.Plot()` incluidas en el markdown de esta presentacion.
+
+
+2. Demuestren las propiedades de *agregacion* y *desagregacion* de la distribucion `Poisson`.
+
+3. Realicen el calculo analitico para demostrar la identidad de la distribucion `binomial-negativa` como `mezcla de poisson-gamma`.
+
+Fecha de entrega: **Martes 19 de febrero.** 
+
+# Lecturas
+
+Lecturas complementarias
+---
+
+* Klugman et al (2004) *Loss Model: From Data to Decisions*, Seccion 4.6.
+
+* Panjer (2006) *Operational Risk Modeling Analytics*, Capitulo 5.
