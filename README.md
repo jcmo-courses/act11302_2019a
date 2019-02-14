@@ -96,7 +96,7 @@ En la carpeta [Bibliografia](https://github.com/JCMO-ITAM/act11302_2019a_carpeta
 
 * Examen parcial 2 (tema 5): **25%**
 
-* Proyecto pr¨¢ctico: **25%**
+* Proyecto prÂ¨Â¢ctico: **25%**
 
 * Examen final: **25%**
 
@@ -106,7 +106,7 @@ En la carpeta [Bibliografia](https://github.com/JCMO-ITAM/act11302_2019a_carpeta
 
 ## Fechas importantes
 
-* Examen parcial 1: **Jueves 21 de febrero**
+* Examen parcial 1: **Jueves 28 de febrero (nueva fecha)**
 
 * Examen parcial 2: Jueves 4 de abril
 
