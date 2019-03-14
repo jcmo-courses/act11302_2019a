@@ -1,0 +1,187 @@
+---
+title: "Tarea1"
+author: "Luis Pedro Barranco Sánchez"
+date: "6/2/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Tarea 1
+
+Consideramos los datos reales de la empresa All State de un portafolio de seguro de autos. Alojados en un respositorio en Github.
+
+```{r Descargo, echo=FALSE, warning=FALSE}
+if(!require("repmis")){install.packages("repmis")}
+library("repmis")
+
+data <- source_data("https://github.com/JCMO-ITAM/Data4Analysis/blob/master/d4a_allstateclaim_data.csv?raw=true")
+data <- as.data.frame(data)
+```
+
+La variable `Claim_Amount` representa el monto de reclamo individual, nuestros valores $x_i$.
+
+Los casos `Claim_Amount==0` representan NO siniestro en la poliza correspondiente. 
+
+$J$ es el numero de polizas en los `datos`, y $n$ es el numero de polizas con no siniestro.
+
+```{r, summary1, echo = FALSE}
+J <- nrow(data)
+n0 <- nrow(as.matrix(which(data$Claim_Amount==0)))
+J;n0
+```
+
+Verosimilitud Bin(N, $\theta_0$)
+---
+
+
+Omitiremos la parte de la combinatoria en la función de densidad de la parte cuya distribución es binomial, pues finalmente será una constante para nuestro estimador por máximo verosimil.
+La funcion de verosimilitud para $(\theta_0,\theta_c)$ con base en los datos es (bajo el supuesto `iid`),
+\begin{eqnarray}
+lik(\theta_0,\theta_c|\text{datos}) 
+& = &
+\prod_{i=1}^{J}f(x_i|\theta_0,\theta_c) \nonumber \\
+& = &
+\prod_{x_i:x_i=1}^{J}\theta_0\times (1-\theta_0)^{n-x_i} \times \prod_{x_i:x_i>0}\theta_c\exp\{-\theta_c x_i\} \nonumber \\
+& = &
+\theta_0^{n_0}  (1-\theta_0)^{JN-n_0}\times \theta_c^{J-n_0}\exp\{-\theta_c \sum_{x_i:x_i>0}x_i\}, \nonumber
+\end{eqnarray}
+
+Maxima verosimilitud 
+---
+
+El EMV para $\theta_0$ con base en los `datos` es dado por: 
+
+\begin{eqnarray}
+  \theta_0^{*}
+  & = &
+  \arg\max_{(0,1)} \theta_0^{n_0} \times (1-\theta_0)^{JN-n_0} \nonumber \\
+  & = &
+  \frac{n_0}{JN}. \nonumber
+\end{eqnarray}
+
+
+En el caso de los datos **AllState**, supondremos que N = 1000 y así entonces el EMV es:
+```{r echo=TRUE}
+N <- 1000
+theta0_star_b <- n0/(J*N)
+theta0_star_b
+```
+
+
+Error
+```{r Error Bin, echo=FALSE}
+N <- 1000
+theta0_b <- seq(.001, .999, .001)
+lik_theta0_b <- dbeta(theta0_b, 1+ n0, J*N-n0+1)
+
+plot(theta0_b, lik_theta0_b, xlim=c(-0.1,1), ylim=c(0, 0.5), 
+     type = "l", ylab= "Verosimilitud", lty = 3,
+     xlab= "theta_0", las=1, main="",lwd=2,
+     cex.lab=1.5, cex.main=1.5, col = "darkorange", axes=FALSE)
+axis(1, at = seq(-0.1,1,.2)) 
+axis(2, las=1) 
+```
+
+
+Verosimilitud Poi($\theta_0$)
+---
+
+
+La funcion de verosimilitud para $(\lambda,\theta_c)$ con base en los datos es (bajo el supuesto `iid`),
+\begin{eqnarray}
+lik(\theta_0,\theta_c|\text{datos}) 
+& = &
+\prod_{i=1}^{J}f(x_i|\theta_0,\theta_c) \nonumber \\
+& = &
+\prod_{x_i:x_i=1}^{J} \frac{e^{-\theta_0} \theta_0^{x_i}}{x_i !} \times \prod_{x_i:x_i>0}\theta_c\exp\{-\theta_c x_i\} \nonumber \\
+& = &
+\frac{e^{-J \theta_0} \theta_0^{n_0}}{\prod x_i !}\times \theta_c^{J-n_0}\exp\{-\theta_c \sum_{x_i:x_i>0}x_i\}, \nonumber
+\end{eqnarray}
+
+
+Maxima verosimilitud 
+---
+
+El EMV para $\theta_0$ con base en los `datos` es dado por: 
+
+\begin{eqnarray}
+  \theta_0^{*}
+  & = &
+  \arg\max_{(0,1)} \frac{e^{-J \theta_0} \theta_0^{n_0}}{\prod x_i !}\nonumber \\
+  & = &
+  \frac{n_0}{J}. \nonumber
+\end{eqnarray}
+
+
+En el caso de los datos **AllState** el EMV es:
+```{r}
+theta0_star <- n0/J
+theta0_star
+```
+
+Error
+```{r Error Poisson, echo=FALSE}
+N <- 1000
+theta0_p <- seq(.001, .999, .001)
+lik_theta0_p <- dgamma(theta0_p, n0+1, J)
+
+plot(theta0_p, lik_theta0_p, xlim=c(0,1), ylim = c(0,1), 
+     type = "l", ylab= "Verosimilitud", lty = 3,
+     xlab= "theta_0", las=1, main="",lwd=2,
+     cex.lab=1.5, cex.main=1.5, col = "darkorange", axes=FALSE)
+axis(1, at = seq(0,1,.2)) 
+axis(2, las=1) 
+```
+
+
+Verosimilitud Geo($\theta_0$)
+---
+
+
+La funcion de verosimilitud para $(\theta_0,\theta_c)$ con base en los datos es (bajo el supuesto `iid`),
+\begin{eqnarray}
+lik(\theta_0,\theta_c|\text{datos}) 
+& = &
+\prod_{i=1}^{J}f(x_i|\theta_0,\theta_c) \nonumber \\
+& = &
+\prod_{x_i:x_i=1}^{J} (1-\theta_0)^{x_i -1} \theta_0 \times \prod_{x_i:x_i>0}\theta_c\exp\{-\theta_c x_i\} \nonumber \\
+& = &
+\theta_0^{J} (1-\theta_0)^{n_0 - J}\times \theta_c^{J-n_0}\exp\{-\theta_c \sum_{x_i:x_i>0}x_i\}, \nonumber
+\end{eqnarray}
+
+
+Maxima verosimilitud 
+---
+
+El EMV para $\theta_0$ con base en los `datos` es dado por: 
+
+\begin{eqnarray}
+  \theta_0^{*}
+  & = &
+  \arg\max_{(0,1)} \theta_0^{J} (1-\theta_0)^{n_0 - J}\nonumber \\
+  & = &
+  \frac{J}{n_0}. \nonumber
+\end{eqnarray}
+
+
+En el caso de los datos **AllState** el EMV es:
+```{r}
+theta0_star <- J/n0
+theta0_star
+```
+
+Error
+```{r Error Geometrica, echo=FALSE}
+theta0_p <- seq(.001, .999, .001)
+lik_theta0_p <- dbeta(theta0_p, J+1, J-n0+1)
+
+plot(theta0_p, lik_theta0_p, xlim=c(0,1.5), ylim = c(0,1), 
+     type = "l", ylab= "Verosimilitud", lty = 3,
+     xlab= "theta_0", las=1, main="",lwd=2,
+     cex.lab=1.5, cex.main=1.5, col = "darkorange", axes=FALSE)
+axis(1, at = seq(0,1.5,.2)) 
+axis(2, las=1) 
+```

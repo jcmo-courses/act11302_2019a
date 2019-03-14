@@ -1,0 +1,239 @@
+---
+title: ACT-11302 Calculo Actuarial III
+subtitle: Sesion 11 - Agregacion de Riesgos - Parte 2/4
+author: Juan Carlos Martinez-Ovando
+institute: Departamento Academico de Actuaria y Seguros
+titlegraphic: /svm-r-sources/ITAM2016.png
+fontsize: 10pt
+output:
+ beamer_presentation:
+    template: ~/svm-r-sources/svm-latex-beamer.tex
+    keep_tex: true
+# toc: true
+    slide_level: 2
+ ioslides_presentation:
+    smaller: true
+    logo: ~/svm-r-sources/ITAM2016.png
+make149: true
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+---
+
+## 4. Aproximacion analitica
+
+La aproximacion analitica para $F_{S-t}(s)$ descansa en el Teorema Central de Limite (TcL), argumentando que la composicion del portafolio, $J_t$, es relativamente `grande`.
+
+Dado que en teoria se conoce la media y varianza de $S_t$, `suponiendo` que $\mathbb{E}(X)$ y $var(X)$ son `fijos` y `conocidos`, se sigue
+\begin{eqnarray}
+F_{S_t}(s)
+ & = &
+ \mathbb{P}\left(S_t \leq s\right)
+ \nonumber \\
+ & = &
+ \mathbb{P}\left(\frac{S_t-\mathbb{E}(S)}{sd(S_t)}\leq \frac{s-\mathbb{E}(S_t)}{sd(S_t)}\right)
+ \nonumber \\
+ & \approx &
+ \mathbb{P}\left( Z \leq \frac{s-\mathbb{E}(S_t)}{sd(S_t)}\right)
+ \nonumber \\
+ & \approx &
+ N\left( S_t | \mathbb{E}(S_t), var(S_t)\right),
+ \nonumber
+\end{eqnarray}
+donde $sd(S) = var(S)^{1/2}$ y $Z \sim N(z|0,1)$. 
+
+---
+
+**Nota.-** El resultado asintotico anterior es valido solo en el caso que $var(X)<\infty,$ (o equivalentemente, sujeto a $\mathbb{E}\left(X^{2}\right)$ sea finito). Esta condicion se cumple solo en el caso en el que las severidades individuales son de _riesgo moderado_, i.e. no existe una prevalencia de riesgos indidividuales grandes. Desde un punto de vista probabilisticos, se sigue cuando el segundo momento del reclamo individual no se aplica cuando el monto del reclamo tenga colas pesada (i.e. exhiba valores extremos).
+
+
+---
+
+### 4.1. Aproximacion analitica modificada por sesgo
+
+Previniendo que el monto agregado de siniestros, $S_t$, pueda exhibir sesgos en su distribucion, debido principalmente a que tiene soporte en la recta real positiva, pero tambien a sesgos en:
+
+* la distribucion de los reclamos individuales
+
+* distribucion del numero de reclamos a traves de $\theta$,
+
+se ha desarrollado una approximacion analitica alternativa a la normal. Esta aproximacion descansa en la distribucion **gamma trasladada** con tres parametros, dada por
+
+\begin{eqnarray}
+F_{S_t}(s) 
+  & \approx &
+  Ga\left(s-s_{t0}|\alpha_{t},\beta_{t}\right),
+\end{eqnarray}
+donde 
+
+* $s_{j0}$ es un parametro de traslacion,
+
+* $\alpha_t$ es un parametro de forma,
+
+* $\beta_t$ es un parametro de escala.
+
+---
+
+El kernel de la distribucion gamma en cuestion es de la forma
+$$
+Ga\left(x|\alpha,\beta\right)
+  \propto
+  x^{\alpha-1} \exp\{-\beta x\}\mathbb{I}_{[0,\infty)}(x).
+$$
+
+En la practica, los parametros $\alpha$, $\beta$ y $s_{0}$ se _obtienen/calibran_ a traves del **metodo de momentos**, en el que se elijen de tal forma que los tres primeros momentos de la distribucion son iguales, i.e.
+\begin{eqnarray}
+\mathbb{E}(S_t)
+  & = &
+  s_{t0} + \alpha_{t}/\beta_{t}
+  \nonumber \\
+var(S_{t})
+  & = &
+  \alpha_{t}/\beta_{t}^{2}
+  \nonumber \\
+sesgo(S_{t})
+  & = &
+  2/\alpha_{t}^{1/2}.
+  \nonumber
+\end{eqnarray}
+
+Resolviendo las tres ecuaiones anteriores para los tres parametros en cuestion se obtiene, 
+\begin{eqnarray}
+\alpha_{t}
+  & = &
+  4/sesgo(S_t)^{2}
+  \nonumber \\
+\beta_{t}
+  & = &
+  2/sesgo(S_{t})sd(S_{t})
+  \nonumber \\
+s_{t0}
+  & = &
+  \mathbb{E}(S_{t}) -2sd(S_{t})/sesgo(S_{t}).
+  \nonumber
+\end{eqnarray}
+
+---
+
+**Supuesto**
+
+Esta aproximacion es valida solo en el caso en que $sesgo(S_t)>0$. En el caso limite cuando $sesgo(S_t)$ decrezca a $0$ se tiene que la aproximacion gamma trasladada converge a la aproximacion normal inducida por el Teorema Central de Limite. **Este es un ejercicio de TAREA a entregarse.**
+
+---
+
+### 4.2. Aproximacion analitica con variante adicional por sesgo
+
+Consideramos una aproximacion adicional a $F_S(s)$ basada en el ajuste a los primeros tres momentos de su distribucion, como la aproximacion anterior. La nueva aproximacion hace referencia a la distribucion `normal potencia`. 
+
+**Supuesto**
+
+Al igual que el caso anterior, partimos del supuesto $\mathbb{E}(S_t)$, $var(S_t)$ y $sesgo(S_t)$ son conocidos (con $sesgo(S_t)>0$). Se tiene que para todo $s\geq 1$ en el soporte $\mathcal{S}$ de $S$,
+\begin{eqnarray}
+\mathbb{P}\left( \frac{S_t-\mathbb{E}(S_t)}{sd(S_t)} \leq s+\frac{sesgo(S_t)}{6}(s^2-1)\right)
+  & \approx &
+  N(s|0,1).
+  \nonumber
+\end{eqnarray}
+
+---
+
+Es decir,
+\begin{eqnarray}
+\mathbb{P}\left( \frac{S_t-\mathbb{E}(S_t)}{sd(S_t)} \leq x \right)
+  & \approx &
+  N\left( \left( \frac{9}{sesgo(S_t)^2} + \frac{6x}{sesgo(S_t)} + 1\right)^{1/2} 
+  - \frac{3}{sesgo(S)}|0,1\right),
+  \nonumber
+\end{eqnarray}
+para $s \geq 1$. 
+
+* En casos donde $s < 1$, la aproximacion inducida por el teorema Central de Limite debera ser utilizada.
+
+---
+
+**Implementacion practica**
+
+* **En la practica**, cuando se desee aproximar $F_S(s)$ empleando aproximaciones analiticas, debemos reemplazar $\mathbb{E}(S_t)$, $var(S_t)$ y $sesgo(S_t)$ por sus correspondientes estimadores muestrales.
+
+---
+
+## 5. Aproximacion por recursion
+
+La recursion que consideraremos ahora descansa en el caso donde $F_X(x)$, la distribucion del monto individual de reclamo, es discretizada considerando $I$ clases/rangos de reclamos, i.e.
+\begin{eqnarray}
+  F_X \approx \sum_{i=1}^{I} q_i \delta_{\{x^{*}_i\}},
+\end{eqnarray}
+donde $\{x^{*}_i\}_{i=1}^{I}$ representan los montos ranqueados de reclamos individuales, y $\{q_i\}_{i=1}^{I}$ las probabilidades de clases correspondientes.
+
+---
+
+**Supuesto**
+
+Es deseble suponer que las clases o los rangos de los montos de reclamos individuales son *equidistantes*.
+
+Así, la distribucion del total de polizas en el portafolio puede agruparse entonces en una `tabla de contingencia`
+$$
+(N_{ti})_{i=1}^{I},
+$$
+donde $$N_{ti}$$ denota el numero de polizas que tuvieron el monto de reclamo $x^{*}_{i}$, con la restriccion $$J_t=\sum_{i=1}^{I}N_{ti}.$$ 
+
+---
+
+La tabla de contingencia viene acompaniada con las probabilidades de realizacion de los reclamos individuales, $$\boldsymbol{\theta}=(\theta_1,\ldots,\theta_I),$$ los cuales estan sujetos a 
+
+* $\theta_{i}\geq 0$ para todo $i=a,\ldots,I$
+
+* $\sum_{i=1}^{I}\theta_i=1.$
+
+De esta forma, el monto agregado de siniestros estaria expresado como,
+$$
+S_t=\sum_{i=1}^{I} N_{tij} x^{*}_{i},
+$$
+considerando que $\sum_{i=1}^{I}q_i=1$, con $x^{*}_{1}=0$ y $x^{*}_{i}>0$ para todo $i\geq 2$.
+
+---
+
+### 5.1. Recursion de De Pril
+
+La recursion de De Pril hace referencia a un portafolio de seguros en el que 
+
+* los montos de siniestros individuales estan ranqueados en una escala equidistnate, considerando un nivel base $M$, i.e. $x^{*}_{i}=M\times i$, para $i=1,\ldots, I$, siento $MI$ el monto maximo de cobsertura.
+
+* adicionalmente, cada poliza esta expuesta $D$ riesgos distintos, con correspondientes porbabulidades de siniestos $\theta_1,\theta_2,\ldots,\theta_D$. (El modelo oroginal considera una sola clasificacion / exposicion a riesgos).
+
+---
+
+De esta forma, se define una nueva tabla de contingencia $$(N_{id})_{i=1,d=1}^{I,D},$$ en la que $N_{id}$ denota el numero polizas con el beneficio $i$ y la probabuilidad de reclamo $\theta_j$.
+
+La formula para calcular la distribucion del monto agregado $S_t$ se obtiene como
+$$
+\mathbb{P}\left(S_t=y\right)=\frac{1}{y}\sum_{i=1}
+^{min\{y,M\}}\sum_{d=1}^{y/d}p(y-id)h(i,d),$$
+con $$p(0)=\prod_{i=1}^{I}\prod_{d=1}^{D}(1-\theta_d)^{n_{id}},$$
+y
+$$h(i,k)=i(-1)^{k-1}\sum_{d=1}^{D}n_{id}\left(\frac{\theta_d}{1-\theta_d}\right)^{k}.$$
+
+---
+
+**Recursion**
+
+La formula anterior tiene una forma simple de calcularse a traves de la siguiente recursion,
+$$
+p_{K}(0)=p(0),
+$$ y
+$$
+p_{K}(y)=\frac{1}{y}\sum_{i=1}^{min\{y,M\}} \sum_{k=1}^{min\{K,y/i\}}p_{K}(y-ik)h(i,k),
+$$
+considerando a $K$ como un parametro adicional. Usualente $K:=4$ es una consideracion viable, pero recordemos que $K$ puede ser cualqueir entero poitivo.
+
+---
+
+## Temas siguientes
+
+* Metodo de momentos para aproximar $F_{S}(s)$
+
+* Metodo basado en simulacion estocastica para aproximar $F_{S}(s)$ 
+
+* Recursiones en le modelo de riesgo colectivo (Recursion de Panjer)

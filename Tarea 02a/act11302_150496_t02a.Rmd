@@ -1,0 +1,116 @@
+---
+title: "Tarea 2"
+author: "Francisco Ramirez Suarez"
+date: "19/02/2019"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Funcion BinNeg.Plot
+Crear funcion BinNeg.Plot() modificando la funcion Poisson.Plot() para generar resultados analogos 
+
+```{r binomial_plot, include=FALSE}
+Binomial.Plot <-function(n, p, low=0, high=n,scale = F, a=NA,b=NA,calcProb=!all(is.na(c(a,b))),quantile=NA,calcQuant=!is.na(quantile)){
+  # Binomial
+  sd = sqrt(n * p * (1 - p))
+  if(scale && (n > 10)) {
+    low = max(0, round(n * p - 3 * sd))
+    high = min(n, round(n * p + 3 * sd))
+  }
+  values = low:high
+  probs = dbinom(values, n, p)
+  plot(c(low,high), c(0,max(probs)), type = "n", 
+       xlab = "Numero de casos",
+       ylab = "Masa de probabilidad",
+       main = "")
+  lines(values, probs, type = "h", col = 2)
+  abline(h=0,col=3)
+  if(calcProb) {
+    if(is.na(a))
+      a = 0
+    if(is.na(b))
+      b = n
+    if(a > b) {
+      d = a
+      a = b
+      b = d
+    }
+    a = round(a)
+    b = round(b)
+    prob = pbinom(b,n,p) - pbinom(a-1,n,p)
+    title(paste("P(",a," <= N <= ",b,") = ",round(prob,6),sep=""),line=0,col.main=4)
+    u = seq(max(c(a,low)),min(c(b,high)),by=1)
+    v = dbinom(u,n,p)
+    lines(u,v,type="h",col=4)
+  }
+  else if(calcQuant==T) {
+    if(quantile < 0 || quantile > 1)
+      stop("El cuantil debe estar entre 0 y 1")
+    x = qbinom(quantile,n,p)
+    title(paste(" ",quantile," quantile = ",x,sep=""),line=0,col.main=4)
+    u = 0:x
+    v = dbinom(u,n,p)
+    lines(u,v,type="h",col=4)
+  }
+  return(invisible())
+}
+```
+
+```{r}
+Binomial.Plot(30,.7, quantile = 0.9)
+```
+
+
+Binomial Negativa
+--
+
+```{r echo=TRUE}
+BinNeg.Plot <- function(n, p, low=0, high=n,scale = F, a=NA,b=NA,calcProb=!all(is.na(c(a,b))),quantile=NA,calcQuant=!is.na(quantile)){
+  #Binomial Negativa
+  sd = (sqrt(n*(1-p)))/p
+  low = max(0, round(n * (1-p) -4 * sd))
+  high = min(n, round(n * (1-p) + 4 * sd))
+  values = low:high
+  probs = dnbinom(values, n, p)
+  plot(c(low,high), c(0,max(probs)), type = "n", 
+       xlab = "Numero de casos",
+       ylab = "Masas de probabilidad",
+       main = "")
+  lines(values, probs, type = "h", col = 2)
+  abline(h=0,col=3)
+  if(calcProb) {
+    if(is.na(a))
+      a = 0
+    if(is.na(b))
+      b = n
+    if(a > b) {
+      d = a
+      a = b
+      b = d
+    }
+    a = round(a)
+    b = round(b)
+    prob = pnbinom(b,n,p) - pnbinom(a-1,n,p)
+    title(paste("P(",a," <= N <= ",b,") = ",round(prob,6),sep=""),line=0,col.main=4)
+    u = seq(max(c(a,low)),min(c(b,high)),by=1)
+    v = dnbinom(u,n,p)
+    lines(u,v,type="h",col=4)
+  }
+  else if(calcQuant==T) {
+    if(quantile < 0 || quantile > 1)
+      stop("El cuantil debe estar entre 0 y 1")
+    x = qnbinom(quantile,n,p)
+    title(paste(" ",quantile," quantile = ",x,sep=""),line=0,col.main=4)
+    u = 0:x
+    v = dnbinom(u,n,p)
+    lines(u,v,type="h",col=4)
+  }
+  return(invisible())
+} 
+```
+
+```{r}
+BinNeg.Plot(40,.8, quantile = 0.9)
+```

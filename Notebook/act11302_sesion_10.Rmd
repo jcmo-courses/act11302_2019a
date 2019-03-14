@@ -1,0 +1,269 @@
+---
+title: ACT-11302 Calculo Actuarial III
+subtitle: Sesion 10 - Agregacion de Riesgos - Parte 1/4
+author: Juan Carlos Martinez-Ovando
+institute: Departamento Academico de Actuaria y Seguros
+titlegraphic: /svm-r-sources/ITAM2016.png
+fontsize: 10pt
+output:
+ beamer_presentation:
+    template: ~/svm-r-sources/svm-latex-beamer.tex
+    keep_tex: true
+# toc: true
+    slide_level: 2
+ ioslides_presentation:
+    smaller: true
+    logo: ~/svm-r-sources/ITAM2016.png
+make149: true
+---
+
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# I. Modelo de riesgo individual
+
+Recordemos, en el modelo de riesgo individual, suponemos que el reclamo de la poliza $j$ es denotado por $X_j$, la cual tiene soporte en 
+$$
+\mathcal{X}=\{0\} \cup (0,\infty),
+$$
+para $j=1,\ldots,J_t$, para un momento del tiempo $t$, con $t\geq 1$.
+
+La variable $J_t$ en este caso es **conocida** y **fija** en cada tiempo $t$. Tipicamente representa el total de suscripcion del portafolio de seguros en el periodo de tiempo correspondiente.
+
+---
+
+**Supuesto**
+
+Tradicionalmente se supone en cada periodo de tiempo $t$ los reclamos $X_{tj}$s son _independientes_ y _homogeneos en distribucion_ (i.i.d.), con distribucion marginal data por la distribucion tipo mezcla, 
+$$
+F_X(x)=\theta\delta_{\{0\}}(x)+(1-\theta)F^{c}_X(x),
+$$  
+donde $$\theta = \mathbb{P}(\text{no siniestro})$$ y $$F^{c}_X(x)=\mathbb{P}\left(X\leq x|\text{siniestro}\right)$$ representa la parte continua de la distribucion, con soporte en $(0,\infty)$.
+
+---
+
+### Monto agregado
+
+Asi, para el periodo de tiempo $t$, el monto agregado de reclamos del portafolio de tamano $J_t$ se define como
+$$
+S_t = \sum_{j=1}^{J_t} X_{tj}.
+$$
+Siendo que $J_t$ se considera como un parametro fijo en el modelo, tenemos que 
+\begin{eqnarray}
+\mathbb{E}(S_t) 
+  & = & J_t\mathbb{E}(X) 
+  \nonumber \\
+var(S_t) 
+  & = & J_t var(X),
+  \nonumber 
+\end{eqnarray}
+
+Denotando los primeros dos momentos de los montos individuales de siniestros como
+$$\mu_X = \mathbb{E}\left(X|\text{siniestro}\right)$$ y $$\sigma_X^{2}=var\left(X|\text{siniestro}\right),$$ se obtiene una simplificacion de las ecuaciones enteriores. 
+
+---
+
+Siendo las severidades individuales $X_{tj}$ variables aleatorias del tipo mixta, se tiene que 
+\begin{eqnarray}
+\mathbb{E}(S_t) 
+  & = & J_t(1-\theta)\mu_{X} 
+  \nonumber \\
+var(S_t) 
+  & = & J_t \left(\mu^{2}_X\theta(1-\theta) + (1-\theta)\sigma_{X}^{2}\right). 
+  \nonumber 
+\end{eqnarray}
+
+
+Aunque el calculo del primer y segundo momentos de $S_t$ es simple, **necesitamos** cuantificar la incertidumbre completa de $S_t$ a traves de su distribucion exacta,
+$$
+F_{S_t}(s) = \mathbb{P}\left(\sum_{j=1}^{J_t}X_{tj} \leq s\right),
+$$
+inducida por $F_X(x)$.
+
+---
+
+### Procedimientos
+
+Hemos visto que esta puede calcularse a traves del siguientes metodos:
+
+1. Convolucion directa
+
+2. Metodo de momentos
+
+3. Simulacion estocastica
+
+4. Aproximacion analitica
+
+5. Recursion
+
+
+---
+
+## 1. Convoluciones
+
+Supongamos que $(X_{tj})_{j=1}^{J_t}$ son variables aleatorias independientes e identicamente distribuidas, con funcion de distribucion $F_X(x)$ y soporte en $\mathcal{X}=(0,\infty)$.
+
+**Caso** $N=2$
+
+Consideremos el caso donde definimos 
+$$
+S_t=X_{t1}+X_{t2}.
+$$
+
+De manera general, para soportes de $\mathcal{X}$en $\Re$, se tiene que,
+\begin{eqnarray}
+ \mathbb{P}(S_t\leq s) 
+   & = &
+   \mathbb{P}(X_{t1}+X_{t2}\leq s)
+   \nonumber \\
+   & = &
+   \int_{\mathcal{X}} \mathbb{P}(X_{t1}+X_{t2}\leq s|X_{t2}=x)\mathbb{P}(X_{t2} \in dx)
+   \nonumber \\
+   & = &
+   \int_{\mathcal{X}} F_{X}(s-x)F_X(d x)
+   \nonumber \\
+   & = &   
+   \int_{\mathcal{X}} F_{X}(s-x)f_X(x) dx
+   \nonumber \\
+   & = &   
+   F_X*F_X(s)
+   \nonumber \\
+   & = &   
+   F^{*(2)}_X(s).
+   \label{eq_convolution}
+\end{eqnarray}
+
+---
+
+Ahora bien, si $X$ tiene soporte en $(0,\infty)$, entonces $F_X(x)$ est\'a determinada por la funci\'on indicadora $\mathbb{I}_{(0,\infty)}(x)$, mientras que $F_X(s-x)$ estar\'a determinada por $\mathbb{I}_{(0,\infty)}(s-x)$, en cuyo caso la integral (\ref{eq_convolution}) se convierte en,
+\begin{eqnarray}
+\mathbb{P}(S_t\leq s) 
+& = &
+\mathbb{P}(X_{t1}+X_{t2}\leq s)
+\nonumber \\
+& = &   
+\int_{0}^{s} F_{X}(s-x)f_X(x) dx
+\nonumber \\
+& = &   
+F_X*F_X(s)
+\nonumber \\
+& = &   
+F^{*(2)}_X(s).
+\label{eq_convolution_positive}
+\end{eqnarray}
+
+---
+
+Siguiendo lo anterior se tiene que en el *ejemplo* donde $X_{t1}$ y $X_{t2}$ son variables aleatorias i.i.d. con distribucion marginal $\text{Exp}(x|\theta)$, con $\theta>0$, se sigue
+\begin{eqnarray}
+\mathbb{P}(S_t\leq s) 
+& = &
+\mathbb{P}(X_{t1}+X_{t2}\leq s)
+\nonumber \\
+& = &   
+F^{*(2)}_X(s)
+\nonumber \\
+& = &
+\text{Ga}(s|2,\theta).
+\label{eq_convolution_exponential}
+\end{eqnarray}
+
+---
+
+**Caso** $N$ **general**
+
+En el caso donde 
+$$
+S_t=\sum_{i=1}^{J_t}X_{ti},
+$$
+se sigue (por induccion), bajo los supuestos mencionados antes, que 
+\begin{eqnarray}
+\mathbb{P}(S_t\leq s) 
+& = &
+F_X^{*(J_t)}(s|\theta).
+\label{eq_convolution_general}
+\end{eqnarray}
+
+**NOTA 1:** Solo en casos especificos de $F_X(\cdot)$ pertenecientes a distribuciones en la familia exponencial se pueden obtener expresiones analíticas cerradas para las convoluciones.
+
+**NOTA 2:** En el caso general donde $F_X(\cdot)$ tenga uno o más átomos, la expresión analítica de la convolución es bastante compleja y, en muchos casos, imposible de obtener; aun cuando la parte absolutamente continua de $F_X$ pertenezca a la familia exponencial.
+
+De esta forma, se puede descansar en otros métodos descritos a continuación.
+
+## 2. Método de momentos
+
+El método de momentos se basa en la identificación de $F_{S_t}(s)$ a través de su correspondiente función generadora de momentos, $M_{S_t}(w)$ definida como $$M_{S_t}(w)=\mathbb{E}_{F_{S_t}}\left(\exp\{wS_t\}\right).$$
+La identificación es única pues la relación entre ambas funciones es $1:1$.
+
+Bajo el supuesto de *independencia y homogeneidad en distribución* se sigue que $$M_{S_t}(w)=\left[M_{X}(w)\right]^{J_t},$$
+donde $M_{X}(w)$ es la función generadora de momentos genérica para las $X_{tj}$s.
+
+---
+
+**Ejercicio:** ?`Cómo sería la expresión de $M_{X}(w)$ bajo el supuesto de intercambiabilidad en las $X_{tj}$s?  
+
+De esta forma, **identificando** la forma estructural de $M_{X}(w)$ puede identificarle la forma funcional asociada con $F_{S_t}(s)$. 
+
+
+---
+
+**Supuestos**
+
+El procedimiento descansa en el supuesto que $M_{X}(w)$ existe y que ésta elevada a una cierta potencia tiene una forma analítica cerrada y conocida.
+
+**Nota:** 
+
+El resultado se generaliza al uso de la *función característica*, $\phi_{X}(w)$, y la *función generadora de probabilidades*, $\rho_{X}(w)$.
+
+---
+
+El reto analitico fundamental de este procedimiento reside en que $F_{X}(x)$ tiene típicamente al menos un punto de discontinuidad en $\{0\}$ (no reclamo por no siniestro), i.e.
+$$
+F_{X}(x)=\theta \mathbb{I}_{\{0\}}(x) + (1-\theta)F_{X}^{c}(x),
+$$
+donde $F_{X}^{c}(x)$ corresponde a la parte (absolutamente) continua de $F_{X}(\cdot)$. En este caso, la función generadora de momentos asociada puede verse como la comosición de:
+
+a. Distribución continua para el reclamo, sujeto a un siniestro, i.e.
+$$M_{X}^{c}(w)=\mathbb{E}_{F_{X}^{c}}\left(\exp\{w X\}\right),$$
+b. Distriución Bernoulli asociada con el eveneto de tener siniestro o no, i.e.
+$$M_{\text{Siniestro}}(w)=\theta + (1-\theta)\exp\{w\}.$$
+
+---
+
+Así, la expresión general para $M_{X}(w)$ es la siguiente,
+$$
+M_{X}(w)=\theta + (1-\theta)\exp\{M_{X}^{c}(w)\}.
+$$
+Esta expresión tendrá una forma anlítica anipulable en función de que $M_{X}^{c}(w)$ sea simple y compatible con $\exp(\cdot)$.
+
+Empleando la expresión anterior, se sigue (bajo el supuesto de independencia y homogeneidad distribucional en las $X_{tj}$), la función generadora de momentos para $F_{S_t}(s)$ está asociada con $$M_{S_t}(w)=\left[\theta_t + (1-\theta_t)\exp\{M_{X_t}^{c}(w)\}\right]^{J_t}.$$
+
+---
+
+Al rededor de esta expresión debemos anotar dos cosas:
+
+1. La distribución para la ocurrencia de siniestros para un tiempo $t$ dado presupone homogeneidad entre las $\{X_{tj}\}_{j=1}^{J_t}$. Sin embargo, podría hacerce alusión a homogeneidad distribucional a través de $t$.
+
+2. El comentario anterior aplica análogamente a $F_{X_t}^{c}(x)$.
+
+Como podrán anticipar, sólo pocos casos particulares será posible identificar $F_{S_t}(s)$ a través de $M_{S_{t}}(w)$. 
+
+---
+
+## 3. Método basado en simulación estocástica
+
+Un método alternativo de calculo/aproximación de $F_{S_t}(s)$ consiste en generar muestras (pseudo) aleatorias de $\{X_{tj}\}_{j=1}^{J_t}$, agregándolas en cada caso descansando en el método de Monte Carlo. Así, el algoritmo se resume en los siguientes pasos:
+
+a. Fijar $K$ número de simulaciones deseadas de $F_{S_t}(s)$ (entre mayor sera $K$ la aproximación será más precisa, pero menos eficiente computacionalente).
+
+b. Para $k=1, \ldots, K$ generar $J_t$ variables pseudo aleatorias de $F_{X_t}(x)$, denottadas por $$\left\{x^{(k)}_{tj}\right\}_{j=1}^{J_t}$$.
+
+c. Para cada $k$, generar la muestra de $F_{S_t}(s)$ correspondiente mediante la agregación de las $x_{tj}^{(k)}$s correspondientes, i.e. $$s_{t}^{(k)}=\sum_{j=1}^{J_t}x^{(k)}_{tj}.$$
+
+d. la colección de datos simulados $\{s_{t}^{(k)}\}_{k=1}^{K}$ corresponde a una muestra aleatoria de $F_{S_t}(s)$.
+
+Usando los recursos computacionales actuales, el método de simulación estocástica resulta ser bastante versátil y útil en la práctica.

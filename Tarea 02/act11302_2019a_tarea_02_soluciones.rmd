@@ -1,0 +1,75 @@
+---
+title: "ACT-11302 - Tarea2 - Soluciones"
+author:
+-  Juan Carlos Martinez-Ovando
+-  Departamento Academico de Actuaria
+date: "Primavera 2019"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: yes
+    self_contained: yes
+    theme: united
+    highlight: textmate
+fig_align: "center"
+fig_width: 18
+---
+
+# P1. Agregacion de distribuciones Poisson {.tabset .tabset-fade .tabset-pills}
+
+Supongamos que $N_1,\ldots,N_M$ son variables aleatorias mutuamente independientes con distribucion Poisson y parametros $\lambda_1,\ldots,\lambda_M$, respectivamente. La suma, $N=N_1+\cdots+N_M$, sigue una distribucion Poisson con parametro $\lambda=\lambda_1+\cdots\lambda_M$.
+
+## Solucion {.tabset .tabset-fade .tabset-pills}
+
+*Este es un resultado ampliamente usado, en particular en el contexto de processos Poisson homogeneos, como veremos mas adelante en el curso.*
+
+La demostracion se obtiene a traves de la identificacion distribucional empleando la funcion generadora de probabilidades (esto es analogo a emplear la funcion caracteristica, por ejemplo).
+
+Asi, la funcion generadora de probabilidades para $N$ se obtiene como,
+\begin{eqnarray}
+P_N(s) & = & \prod_{m=1}^{M}P_{N_m}(s) \nonumber \\
+ & = & \prod_{m=1}^{M}\exp\left\{\lambda_m(s-1)\right\} \nonumber \\
+ & = & \exp\left\{\sum_{m=1}^{M}\lambda_m(s-1)\right\} \nonumber \\
+ & = & \exp\left\{\lambda(s-1)\right\}, \nonumber \\
+\end{eqnarray}
+por lo que el resultado se sigue.
+
+
+# P2. Desgregacion de la distribucion Poisson {.tabset .tabset-fade .tabset-pills}
+
+Supongamos que la frecuencia de siniestros, $N$, es descrita por la distribucion $\text{Po}(n|\lambda)$, con $\lambda>0$. Supongamos que cada siniestro puede ser clasificado en uno de $M$ tipos de siniestros distintos con probabilidades $\phi_1,\ldots,\phi_M$. Entonces, el numero de siniestros de cada uno de estos $M$ tipos, $N_1\ldots,N_M$ son mutuamente independientes con distribucion $\text{Po}(n|\phi_m \lambda)$, para $m=1,\ldots,M$.
+
+## Solucion {.tabset .tabset-fade .tabset-pills}
+
+*La solucion se obtiene a partir de un planteamiento inverso, en terminos de condicionar en $N=n$, para todo $n\in\mathcal{N}$.*
+
+Asi, la distribucion del vector $(N_1,\ldots,N_M)$ condicional en $N=n$ es $\text{Mult}((n_1,\ldots,n_M)|n,\phi_1,\ldots,\phi_M)$.
+
+De la relacion anterior se sigue que la distribucion marginal de cada $N_m$ condicional en $N=n$ es $\text{Bin}(n_m|n,\phi_m)$, para $m=1\ldots,M$. Es decir, 
+$$
+\mathbb{E}(N_m|n=n)=\mathbb{E}_{\text{Bin}}(N_m|n,\phi_m)=n\phi_m.
+$$
+
+Ahora, marginalizando respecto a $N$ para $N_m$ tenemos, 
+\begin{eqnarray}
+\mathbb{P}(N_m=n_m) & = & \sum_{n=0}^{\infty}\mathbb{P}(N_m=n_m,N=n) \nonumber \\
+& = & \sum_{n=0}^{\infty}\mathbb{P}(N_m=n_m|N=n)\mathbb{P}(N=n) \nonumber \\
+& = & \sum_{n=0}^{\infty}\text{Bin}(n_m|n,\phi_m)\text{Po}(n|\lambda). \nonumber
+\end{eqnarray}
+De donde se sigue que
+$$
+\mathbb{E}(N_m)=\phi_m\lambda,
+$$
+para $m=1,\ldots,M$.
+
+Para demostrar que el tipo de distribucion marginal de las $N_m$s es Poisson, consideramos el procedimiento analogo de probabilidad total para $(N_1,\ldots,M_M)$, i.e.
+\begin{eqnarray}
+\mathbb{P}(N_1=n_1,\ldots,N_M=n_m) & = & \sum_{n=0}^{\infty}\mathbb{P}(N_1=n_1,\ldots,N_M=n_m|N=n)\mathbb{P}(N=n) \nonumber \\
+& = & \sum_{n=0}^{\infty}\left(\frac{n!}{n_1!\cdots n_M!}\right)\phi_1^{n_1}\cdots \phi_m^{n_m}
+\frac{e^{-\lambda}\lambda^n}{n!} \nonumber \\
+& = & \prod_{m=1}^{M}\frac{e^{\lambda\phi_m}(\lambda\phi_m)^{n_m}}{n_m!}. \nonumber \\
+\end{eqnarray}
+
+La ultima expresion es un caso particular de la distribucion Poisson conjunta, donde los componentes son mutuamente independientes. Por lo que concluye la demostracion.

@@ -1,0 +1,114 @@
+---
+title: ACT-11302 Calculo Actuarial III
+subtitle: Sesion 09 - Metodos para la creacion de distribuciones- Parte 1/2
+author: Juan Carlos Martinez-Ovando
+institute: Departamento Academico de Actuaria y Seguros
+titlegraphic: /svm-r-sources/ITAM2016.png
+fontsize: 10pt
+output:
+ beamer_presentation:
+    template: ~/svm-r-sources/svm-latex-beamer.tex
+    keep_tex: true
+# toc: true
+    slide_level: 2
+ ioslides_presentation:
+    smaller: true
+    logo: ~/svm-r-sources/ITAM2016.png
+make149: true
+---
+
+<style>
+slides > slide.backdrop {
+  background: white;
+  border-bottom: 0px;
+  box-shadow: 0 0 0;
+}
+
+
+slides > slide {
+  font-family: 'Open Sans', Helvetica, Arial, sans-serif;
+  border-bottom: 3px solid  #F66733;
+  box-shadow:  0 3px 0 #522D80;
+
+}
+
+.title-slide hgroup h1 {
+  color: #522D80;
+}
+
+h2 {
+
+  color: #522D80;
+}
+
+slides > slide.dark {
+  background: #522D80 !important;
+  border-bottom: 0;
+  box-shadow: 0 0 0;
+}
+
+.segue h2 {
+  color: white;
+}
+
+slides > slide.title-slide {
+  border-bottom: 0;
+  box-shadow: 0 0 0;
+}
+
+ol, ul {
+
+padding-bottom: 10px;
+
+}
+
+</style>
+
+
+# Objetivos
+
+Objetivos
+---
+
+* Comprender algunos metodos empleados para crear nuestras distribuciones de frecuencias de siniestros.
+
+# Distribuciones compuestas
+
+Definicion
+---
+
+La *composicion de distribuciones* surge como distribucion de *sumas de variables aleatorias*.
+
+Sean $N_{1},\ldots,N_M$ variables aleatorias no negativas con soporte en los entreros, i.e. $\mathcal{N}=\{0,1,\ldots\}$. Definimos la suma de estas variables como
+$$
+S=\sum_{m=1}^{M}N_m.
+$$
+Si $M$ es en si mismo un entero no negativo aleatorio, y $M$ es independiente estocasticamente de $N_1,\ldots,N_M$; se dice que la distriucion de $S$ es una **distribucion compuesta.**
+
+* *Distribucion primaria:* $M\sim F_M(m)$
+
+* *Distribucion secundaria:* $N_1,\ldots,N_M\sim^{iid} F_N(n)$
+
+Caso sencillo
+---
+
+Pensemos que $F_M(m)$ es una distribucion degenerada en $m^*>1$. En particular, pensemos que $m^*=2$. En este caso $S$ es la suma de *dos* componentes aleatorios,
+$$
+S=N_1+N_2.
+$$
+La distribucion de $S$ la podemos encontrar como la identificacion de las masas de probabilidades
+\begin{eqnarray}
+p_S(s) & = & \mathbb{P}(N_1+N_2=s)=\mathbb{P}(N_1=s-N_2)\nonumber\\
+&=&\sum_{n=0}^{s}\mathbb{P}(N_1=s-n,N_2=n).\nonumber
+\end{eqnarray}
+
+# Distribuciones tipo mexclas
+
+# Lecturas
+
+Lecturas complementarias
+---
+
+* Klugman et al (2004) *Loss Model: From Data to Decisions*, Seccion 4.7.
+
+* Panjer (2006) *Operational Risk Modeling Analytics*, Capitulo 5.

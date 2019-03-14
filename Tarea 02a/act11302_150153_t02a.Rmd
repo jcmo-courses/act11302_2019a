@@ -1,0 +1,57 @@
+---
+title: "Tarea 2"
+author: "Elisa García Escobedo"
+date: "18 de febrero de 2019"
+output: pdf_document
+---
+
+#Aquí X sería el número de pruebas necesarias para conseguir (k éxitos).
+```{r setup, include=FALSE}
+BinNeg.Plot <-function(p,k, low=0, high=k,scale = F, a=NA,b=NA,calcProb=!all(is.na(c(a,b))),quantile=NA,calcQuant=!is.na(quantile)){
+  # BinomialNegativa
+  sd = sqrt(k * (1 - p))/p
+  
+  values = low:high
+  probs = dnbinom(values, k, p)
+  plot(c(low,high), c(0,max(probs)), type = "n", 
+       xlab = "Numero de casos",
+       ylab = "Masa de probabilidad",
+       main = "")
+  lines(values, probs, type = "h", col = 2)
+  abline(h=0,col=3)
+  if(calcProb) {
+    if(is.na(a))
+      a = 0
+    if(is.na(b))
+      b = n
+    if(a > b) {
+      d = a
+      a = b
+      b = d
+    }
+    a = round(a)
+    b = round(b)
+    prob = pnbinom(b,k,p) - pnbinom(a-1,k,p)
+    title(paste("P(",a," <= N <= ",b,") = ",round(prob,6),sep=""),line=0,col.main=4)
+    u = seq(max(c(a,low)),min(c(b,high)),by=1)
+    v = dnbinom(u,k,p)
+    lines(u,v,type="h",col=4)
+  }
+  else if(calcQuant==T) {
+    if(quantile < 0 || quantile > 1)
+      stop("El cuantil debe estar entre 0 y 1")
+    x = qnbinom(quantile,k,p)
+    title(paste(" ",quantile," quantile = ",x,sep=""),line=0,col.main=4)
+    u = 0:x
+    v = dnbinom(u,k,p)
+    lines(u,v,type="h",col=4)
+  }
+  return(invisible())
+}
+BinNeg.Plot(.7,100)
+```
+```{r}
+
+BinNeg.Plot(.7,100,a=27,b=33,scale=T)
+
+```

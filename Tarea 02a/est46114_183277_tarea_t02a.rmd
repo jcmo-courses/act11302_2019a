@@ -1,0 +1,163 @@
+---
+Author: Francisco Alvarez Rojo
+Title: Tarea 2 Est Multiv
+---
+
+
+```{r}
+library(tidyverse)
+library(gdata)
+library(psych)
+library(MCMCpack)
+library(readxl)
+```
+
+Consideren los datos de tipo de cambio /USD de la sesión 09 (est46114 s06 data.csv).
+
+```{r}
+data <- read_xls("data/est46114_s06_data.xls")
+#data <- data.frame(data[,-1], row.names = data[,1])
+data <- data %>% dplyr::select(Date,Canada, Mexico, Brazil, EU12,Russia)
+date <- as.Date(data$Date) 
+# Estandarizo
+data <- as.data.frame(scale(data[,-1]))
+data$Date <- date
+
+```
+
+Entiendo la distribución del tipo de cambio en los países que seleccioné:
+```{r}
+par(mfrow = c(3,1))
+plot(data$Date, data$Canada, type = 'l', xlab = 'Fecha')
+plot(data$Date, data$Mexico, type = 'l', xlab = 'Fecha')
+plot(data$Date, data$Brazil, type = 'l', xlab = 'Fecha')
+```
+En esta comparativa se observa que Brazil ha seguido patrones mas cercanos a los del movimento del tipo de cambio en Canada. Por el otro lado, aunque México presenta un movimiento similar se observan desfaces respecto a las previas economías.
+
+```{r}
+par(mfrow = c(2,1))
+plot(as.Date(data$Date), data$EU12, type = 'l', xlab = 'Fecha')
+plot(as.Date(data$Date), data$Russia, type = 'l', xlab = 'Fecha')
+```
+
+Esta serie de tiempo presenta información con correlación bastante baja, ya que los patrones observados en el grupo EU12 no se manifiestan en la economía de Rusia.
+
+1. Apliquen el analisis de factores dinamicos en estos datos considerando que se recupere
+un solo factor (eliminando los paises con cambios en nivel significativo).
+
+```{r}
+pairs.panels(data[,1:5], ellipses=F, scale=T, smooth=F, col=0)
+```
+
+Tras analizar esta gráfica podría ser que las economías de Brasil y Canada hayan tenido la mayor correlación dentro del grupo. 
+
+```{r}
+M.sim <- 10000
+M.burn <- 500
+posterior.data <- MCMCfactanal(~Canada+Mexico+Brazil+EU12+Russia, 
+                          factors=1,
+                          lambda.constraints=list(),
+                          verbose=0, store.scores=FALSE, 
+                          a0=1, b0=0.15,
+                          data=data, 
+                          burnin=M.burn, mcmc=M.sim, thin=20)
+```
+
+```{r}
+plot(posterior.data)
+```
+
+
+
+
+
+
+2. Apliquen el analisis de factores dinamicos en estos datos considerando que se recuperen
+dos factores (eliminando los paises con cambios en nivel significativo).
+
+```{r}
+M.sim <- 10000
+M.burn <- 500
+posterior.data2 <- MCMCfactanal(~Canada+Mexico+Brazil+EU12+Russia, 
+                          factors=2,
+                          lambda.constraints=list(),
+                          verbose=0, store.scores=FALSE, 
+                          a0=1, b0=0.15,
+                          data=data, 
+                          burnin=M.burn, mcmc=M.sim, thin=20)
+```
+
+```{r}
+plot(posterior.data2)
+```
+
+
+
+3. Comparen las distribuciones y niveles medios del primer factor del inciso anterior con el
+factor unico del primer inciso. Discutan que pasa con los niveles medios y la dispersion
+subyacente de estos dos factores.
+ 
+ Primer factor 
+```{r}
+dist_1factCan <-  as.data.frame(posterior.data[,1])
+dist_1factCan$Type <- rep('1° Factor', length(dist_1factCan))
+
+dist_1factMex <- as.data.frame(posterior.data[,2])
+dist_1factMex$Type <- rep('1° Factor', length(dist_1factMex))
+
+dist_1factBra <- as.data.frame(posterior.data[,3])
+dist_1factBra$Type <- rep('1° Factor', length(dist_1factBra))
+
+dist_1factEU12 <- as.data.frame(posterior.data[,4])
+dist_1factEU12$Type <- rep('1° Factor', length(dist_1factEU12))
+
+dist_1factRus <- as.data.frame(posterior.data[,5])
+dist_1factRus$Type <- rep('1° Factor', length(dist_1factRus))
+
+dist_2factCan <- as.data.frame(posterior.data2[,1])
+dist_2factCan$Type <- rep('2° Factor', length(dist_2factCan))
+
+dist_2factMex <- as.data.frame(posterior.data2[,3])
+dist_2factMex$Type <- rep('2° Factor', length(dist_2factMex))
+
+dist_2factBra <- as.data.frame(posterior.data2[,5])
+dist_2factBra$Type <- rep('2° Factor', length(dist_2factBra))
+
+dist_2factEU12 <- as.data.frame(posterior.data2[,7])
+dist_2factEU12$Type <- rep('2° Factor', length(dist_2factEU12))
+
+dist_2factRus <- as.data.frame(posterior.data2[,9])
+dist_2factRus$Type <- rep('2° Factor', length(dist_2factRus))
+
+Canada <- rbind(dist_1factCan, dist_2factCan)
+Mexico <- rbind(dist_1factMex, dist_2factMex)
+Brazil <- rbind(dist_1factBra, dist_2factBra)
+EU12 <- rbind(dist_1factEU12, dist_2factEU12)
+Russia <- rbind(dist_1factRus, dist_2factRus)
+
+```
+ 
+ Comparación Canadá
+```{r}
+ggplot(Canada, aes(x=var1, fill=Type)) + geom_density(alpha=.3) + ggtitle('Canada')
+```
+ 
+ Comparación México
+```{r}
+ggplot(Mexico, aes(x=var1, fill=Type)) + geom_density(alpha=.3) + ggtitle('Mexico')
+```
+ 
+  Comparación Brasil
+```{r}
+ggplot(Brazil, aes(x=var1, fill=Type)) + geom_density(alpha=.3) + ggtitle('Brazil')
+```
+
+ Comparación EU12
+```{r}
+ggplot(EU12, aes(x=var1, fill=Type)) + geom_density(alpha=.3) + ggtitle('EU12')
+```
+
+ Comparación Russia
+```{r}
+ggplot(Russia, aes(x=var1, fill=Type)) + geom_density(alpha=.3) + ggtitle('Russia')
+```

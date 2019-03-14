@@ -1,0 +1,61 @@
+---
+title: "Tarea 01"
+author: "Jorge Casares"
+date: "11 de febrero de 2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+if(!require("repmis")){install.packages("repmis")}
+library("repmis")
+data<- source_data('https://raw.githubusercontent.com/JCMO-ITAM/Data4Analysis/master/d4a_allstateclaim_data.csv')
+
+J <- nrow(data)
+n0 <- nrow(as.matrix(which(data$Claim_Amount==0)))
+J;n0
+
+theta0_star <- n0/J
+theta0_star
+
+theta0 <- seq(.001, .999, .001)
+lik_theta0 <- dbinom(theta0, J, 1-(n0/J) )
+
+plot(theta0, lik_theta0, xlim=c(0,1), ylim=c(0, 1.25 * max(lik_theta0,1.6)), 
+     type = "l", ylab= "Verosimilitud", lty = 3,
+     xlab= "theta_0", las=1, main="",lwd=2,
+     cex.lab=1.5, cex.main=1.5, col = "darkorange", axes=FALSE)
+axis(1, at = seq(0,1,.2)) #adds custom x axis
+axis(2, las=1) # custom y axis
+
+theta1 <- seq(.001, .999, .001)
+lik_theta1 <- dpois(theta1, n0/J)
+
+plot(theta1, lik_theta1, xlim=c(0,1), ylim=c(0, 1.25 * max(lik_theta1,1.6)), 
+     type = "l", ylab= "Verosimilitud", lty = 3,
+     xlab= "theta_0", las=1, main="",lwd=2,
+     cex.lab=1.5, cex.main=1.5, col = "darkorange", axes=FALSE)
+axis(1, at = seq(0,1,.2)) #adds custom x axis
+axis(2, las=1) # custom y axis

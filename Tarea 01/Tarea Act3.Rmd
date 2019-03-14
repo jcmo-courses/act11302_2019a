@@ -1,0 +1,105 @@
+---
+title: "Tarea 1"
+author: "Elisa García Escobedo"
+date: "5 de febrero de 2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r}
+if(!require("repmis")){install.packages("repmis")}
+
+
+library("repmis")
+require(ggplot2)
+require(gridExtra)
+
+data <- source_data("https://raw.github.com/JCMO-ITAM/Data4Analysis/master/d4a_allstateclaim_data.csv?raw=true")
+J <- nrow(data)
+n0 <- nrow(as.matrix(which(data$Claim_Amount==0)))
+J;n0
+
+```
+
+
+#Distribución Binomial
+
+```{r}
+L_binomial <- function(n, S){
+    function(theta){
+        theta ^ S * (1 - theta) ^ (n - S)
+    }  
+}
+
+xy <- data.frame(x = 0:1, y = 0:1)
+verosimilitud <- ggplot(xy, aes(x = x, y = y)) +
+    stat_function(fun = L_binomial(n = J/100, S = n0/100)) +
+    xlab(expression(theta)) +
+    ylab(expression(L(theta))) +
+    ggtitle("      Verosimilitud")
+
+
+grid.arrange(verosimilitud, nrow = 1)  
+
+```
+
+```{r}
+optimize(L_binomial(n = J, S = n0), interval = c(0, 1), maximum = TRUE)
+```
+```{r}
+quantile1 <- list(p=0.99, x=0.7)
+quantile2<-list(p=.5,x=0.2)
+
+beta.elicitacion <- function(quantile1,quantile2){
+  quantile1_p <- quantile1[[1]]; quantile1_q <- quantile1[[2]]
+  quantile2_p <- quantile2[[1]]; quantile2_q <- quantile2[[2]]
+
+   prior <- beta.select(quantile1,quantile2)
+   prior
+   prior_a <- prior[1]; prior_b <- prior[2]
+   
+   print(paste("Elicitacion para a=",prior_a,"b=",prior_b))
+   
+
+}
+
+if(!require("LearnBayes")){install.packages("LearnBayes")}
+library("LearnBayes")
+
+beta.elicitacion(quantile1,quantile2)
+
+```
+#Distribución Geometrica
+```{r}
+L_geometrica <- function(n, S){
+    function(alfa){
+        (alfa^n) * (1 - alfa) ^ (S-n)
+    }  
+}
+
+ln_geometrica<-function(n,S){
+  function(alfa){
+    (n/alfa)-(1/(1-alfa))*(n-S)
+  }
+}
+xy <- data.frame(x = 0:1, y = 0:1)
+verosimilitud <- ggplot(xy, aes(x = x, y = y)) +
+    stat_function(fun =L_geometrica(n = J/100, S = n0/100)) +
+    xlab(expression(alfa)) +
+    ylab(expression(L(alfa))) +
+    ggtitle("      Verosimilitud")
+
+
+grid.arrange(verosimilitud, nrow = 1) 
+```
+```{r}
+
+optimize(L_geometrica(n = J, S = n0), interval = c(0, 1), maximum = TRUE)
+
+```
+

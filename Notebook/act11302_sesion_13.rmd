@@ -1,0 +1,307 @@
+---
+title: "Sesion 13 - Laboratorio"
+author:
+-  Juan Carlos Martinez-Ovando
+-  Departamento Academico de Actuaria
+date: "Primavera 2019"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: yes
+    self_contained: yes
+    theme: united
+    highlight: textmate
+fig_align: "center"
+fig_width: 18
+---
+
+# Modelo de agregada de riesgo {.tabset .tabset-fade .tabset-pills}
+
+Consideremos los datos de `AllState` nuevamente:
+
+```{r}
+data <- read.csv("./d4a_allstateclaim_data.csv")
+head(data)
+```
+
+_En este caso el archivo de datos esta contenido en la carpeta `Notebook` del repositorio del curso._ Recordemos de estos datos el contenido:
+
+## Descripcion
+
+Los datos corresponden a reclamos por polizas de un seguro de autos de la empresa _AllState_. Se supone que cada poliza es contratada por un hogar. Los montos de reclamos para las diferentes polizas pueden diferenciarse por anio de suscripcion, modelo del vehiculo y fabricante.
+
+## Diccionario
+
+- `Household_ID` INT - Identificador numerico de la poliza (una por hogar).
+
+- `Vehicle` INT - identificador del vehiculo asegurado por poliza (dentro de cada hogar).
+
+- `Calendar_Year` INT - Anio calendario en el que el vehiculo fue asegurado.
+
+- `Model_Year` INT - Anio calendario de fabricacion/venta del vehiculo. 
+
+- `Blind_Make` INT - Fabricante del vehiculo (discresional).
+
+- `Claim_Amount` INT - Monto de reclamo asociado con el vehiculo (montos en USD).
+
+**Nota:** Las polizas con reclamos nulos (`Claim_Amount`==0) corresponden a casos no siniestrados.
+
+# Modelo {.tabset .tabset-fade .tabset-pills}
+
+## Pregunta clave
+
+?`Como identificar el tipo de enfoque de modelacion? a.k.a.:
+
+* Enfoque de riesgo individual
+
+* Enfoque de riesgo colectivo
+
+## Frecuencia de Siniestros
+
+Empiricamente, podemos identificar el enfoque con base en el `contenido de la informacion/datos` proporcionada. En este caso:
+
+* En este caso, el campo `Claim_Amount`, que indica el monto del reclamo de siniestro, esta asociado univocamente a cada poliza, i.e. `Household_ID` para cada **periodo de operacion** (`Calendar_Year`).
+
+
+Asi, podemos definir:
+$$
+\iota_{tj} = 
+\begin{cases}
+1, & \text{ poliza }j, \text{ siniestrada en }t\\
+0, & \text{ e.o.c. },
+\end{cases}
+$$
+para $t=2005,2006,2007$ y $j=1,\ldots,J_t$.
+
+```{r}
+data <- as.data.frame(data)
+data[,"iota"] <- 0
+data[which(data$Claim_Amount>0),"iota"] <- 1
+table(data[,c("Calendar_Year","iota")])
+```
+
+De esta forma, tenemos que la suscripcion $J_t$ para los tres anios, es:
+
+```{r}
+table(data$Calendar_Year)
+```
+
+De igual forma, el numero de siniestros en esos anios, $N_t$, definido como
+$$
+N_t=\sum_{j=1}^{J_t}\iota_{tj},
+$$
+tiene los siguientes datos realizados:
+
+```{r}
+table(data[which(data$iota==1),"Calendar_Year"])
+```
+
+Como mencionamod, dado que cada poliza puede tener a lo mas un siniestro en cada periodo de operacion (en este caso), el modelo pertinente para $N_t$ podra ser
+$$
+N_t \sim \text{Bin}(n|J_t,\theta_t),
+$$
+reconocidiendo que cada `periodo de operacion` puede tener una incidencia en siniestralidad distinta.
+
+```{r}
+theta_est <- as.matrix(table(data[which(data$iota==1),"Calendar_Year"])) / as.matrix(table(data$Calendar_Year))
+theta_est <- as.data.frame(theta_est)
+colnames(theta_est) <- c("Theta_ML")
+theta_est <- ts(theta_est,start = c(2005), frequency = 1)
+theta_est
+plot(theta_est)
+```
+
+## Severidades
+
+Ahora bien, respecto a la severidad individual, consideramos la variable $X_{tj}$ condicional en $\iota_{tj}=1$, i.e. consideramos los datos con `Claim_Amount>0`.
+
+Esto nos brindara la oportunidad de obtener informacion respecto al **monto agregado de siniestros**, $S_t$, definido como
+\begin{eqnarray}
+S_{t} & = & \sum_{j=1}^{J_t} X_{tj}\iota_{tj} \nonumber \\
+      & = & \sum_{i=1}^{N_t} X_{ti}\mathbb{I}(X_{ti}>0), \nonumber
+\end{eqnarray}
+donde 
+
+* $J_t$ representa el tamanio de la suscripcion, y
+
+* $N_t$ representa la frecencia de siniestros,
+
+ambas cantidades en $t$.
+
+**NOTA:** Recordemos que aunque $N_t$ la podemos medir en terminos absolutos, en realidad su informacion es referida a $J_t$ (esto directamente en el caso de **enfoque de riesgo individual**).
+
+En este caso, los montos agregados de siniestros _anio-con-anio_, son:
+
+```{r}
+data_x <- data[which(data$iota==1),"Claim_Amount"]
+data_t <- data[which(data$iota==1),"Calendar_Year"]
+(S_t <- rowsum(data_x, data_t))
+```
+
+
+```{r}
+S_t <- ts(S_t,start = c(2005), frequency = 1)
+plot(S_t)
+```
+Pero, **recordemos** que la informacion en $S_t$ en realidad proviene de la informacion de las $(x_{ti})_{i=1}^{n_t}$ correspondientes.
+
+La informacion desagregada de las $(x_{ti})_{i=1}^{n_t}$, _periodo-a-periodo_ puede verse de la siguiente forma:
+
+### Para 2005
+
+```{r}
+data_x1 <- data[which(data$iota==1 & data$Calendar_Year==2005),"Claim_Amount"]
+summary(data_x1)
+```
+
+```{r}
+hist(data_x1,100)
+```    
+
+### Para 2006
+
+```{r}
+data_x2 <- data[which(data$iota==1 & data$Calendar_Year==2006),"Claim_Amount"]
+summary(data_x2)
+```
+
+```{r}
+hist(data_x2,100)
+```    
+
+
+### Para 2007
+
+```{r}
+data_x3 <- data[which(data$iota==1 & data$Calendar_Year==2007),"Claim_Amount"]
+summary(data_x3)
+```
+
+```{r}
+hist(data_x3,100)
+```  
+
+### Observaciones
+
+De los datos, podemos observar los **siguientes hechos estilizados**
+
+* _Anio-con-anio_, el **tercer cuantil muestral** muestra una ligera tendencia a la alza, pero en niveles semejantes (i.e. montos en el orden de $140$ unidades).
+
+* Sin embargo, _anio-con-anio_, el valor maximo (i.e. rango entre el `maximo muestral` y el `tercer cuantil muestral`) muestra una dentencia a la baja.
+
+* El `monto mediano individual muestral` es en $2005$ y $2006$ semejante, mientras que en $2007$ los datos muestran un repunte en aproximadamente $4$ unidades.
+
+* En todos los anios, el `primer cuantil muestral` es semejante en nivel.
+
+```{r}
+data_x <- data[which(data$iota==1),c("Calendar_Year","Claim_Amount")]
+data_x$Calendar_Year <- as.factor(data_x$Calendar_Year)
+colnames(data_x)
+if(!require('ggplot2')){install.packages("ggplot2")}
+library("ggplot2")
+ggplot(data = data_x, aes(x = Calendar_Year, y = Claim_Amount)) +
+  geom_boxplot(aes(fill = Calendar_Year), width = 0.8) + theme_bw()
+```
+
+# Modelacion  {.tabset .tabset-fade .tabset-pills}
+
+Empezaremos modelando los datos, _periodo-a-periodo_,
+$$
+\{n_t,(x_{ti})_{i=1}^{n_t}\},
+$$
+sujeto a $J_t$, para $t=2005,2006,2007$, sujeto a $J_y$ de la manera mas simple:
+
+* **Homogeneidad** en $t$, i.e.
+
+\begin{eqnarray}
+N_t & \sim & \text{Bin}(n|J_t,\theta), \nonumber \\
+x_{ti} & \sim & \text{Exp}(x|\lambda), \nonumber
+\end{eqnarray}
+con $0<\theta<1$ y $\lambda>0$ parametros desconocidos.
+
+* **Simetria estocastica** en $t$ e $i=1,\ldots,n_t$, expresada en la forma de `independencia estocastica` entre `periodos` y `entre polizas`.
+
+
+## Observaciones
+
+* Los parametros $\theta$ y $\lambda$ son los mismos para todo $t$ (este es un supuesto no sustentable, dados los comentarios anteriores).
+
+* El supuesto de `independencia estocastica` no es necesariamente sustentable, al menos respecto a $t$.
+
+* El supuesto distribucional para las $X_{tj}$ tampoco es necesariamente sustentable, porque las caracteristicas de cambio en las $x_{tj}$ a traves del tiempo $t$ indica que la distribucion subyacente para $x_{tj}$ es recomendable tenga tres parametros (**mas adelante regresaremos a esto**).
+
+## Parametros
+
+Con base en los datos,
+$$
+\{n_t,(x_{ti})_{i=1}^{n_t}\},
+$$
+buscaremos encontrar los parametros
+$$
+(\theta,\lambda) \in (0,1)\times (0,\infty),
+$$
+mas adecuados.
+
+La forma de encontrarlos es a traves de la funcion de verosimilitud,
+
+## Verosimilitud
+
+De esta forma, la verosimilitud para $(\theta,\lambda)$ dados los `datos` queda expresada como,
+\begin{eqnarray}
+lik(\theta,\lambda|\text{datos}) & = & p(n_{2005},(x_{2005,i})_{i=1}^{n_{2005}},n_{2006},(x_{2006,i})_{i=1}^{n_{2006}},n_{2007},(x_{2007,i})_{i=1}^{n_{2007}}|\theta,\lambda) \nonumber \\
+& = & \prod_{t=2005}^{2007}p(n_{t},(x_{t,i})_{i=1}^{n_{t}}|\theta,\lambda)\nonumber \\
+& = & \prod_{t=2005}^{2007}\text{Bin}(n_{t}|J_t,\theta) \times \prod_{t=2005}^{2007}\prod_{i=1}^{n_t}\text{Exp}(x_{t,i}|\lambda)\nonumber \\
+& = & lik\left(\theta|(J_t,n_t)_{t=2005}^{2007}\right) \times lik\left(\lambda|(x_{t,i})_{t=2005,i=1}^{2007,n_t}\right).\nonumber
+\end{eqnarray}
+
+Noten que en la expresion anterior se manifiesta el **supuesto de separabilidad** que comentamos en clase previamente.
+
+```{r}
+theta_grid <- seq(0,1,0.01)
+lambda_grid <- seq(0,1000,1)
+if(!require('lattice')){install.packages("lattice")}
+library("lattice")
+data_n <- sum(data$iota)
+data_J <- nrow(data)
+data_xsum <- sum(data[which(data$iota==1),"Claim_Amount"])
+theta <- data_n/data_J; lambda <- (data_xsum / data_n)
+loglikelihood <- function(theta,lambda,data_n,data_J,data_xsum){
+  loglik.theta <- data_n*log(theta) + (data_J-data_n)*log(1-theta)
+  loglik.lambda <- data_n*log(lambda) -lambda*data_xsum
+  loglik <- loglik.theta + loglik.lambda
+  return(loglik)
+}
+loglikelihood(theta,lambda,data_n,data_J,data_xsum)
+thetalambda_grid <- expand.grid( x = theta_grid, y = lambda_grid)
+dim(thetalambda_grid)
+loglik_grid <- matrix(NaN,ncol=1,nrow=nrow(thetalambda_grid))
+G <- nrow(thetalambda_grid)
+g <- 1
+for(g in 1:G){loglik_grid[g] <- loglikelihood(thetalambda_grid[g,1],thetalambda_grid[g,2],data_n,data_J,data_xsum)}
+```
+
+```
+if(!require('plot3D')){install.packages("plot3D")}
+library("plot3D")
+
+scatter3D(thetalambda_grid[,1], thetalambda_grid[,2], loglik_grid, 
+          pch = 18, cex = 2, 
+          theta = 20, phi = 20, ticktype = "detailed",
+          xlab = "theta", ylab = "lambda", zlab = "log-lik",  
+          surf = list(x = thetalambda_grid[,1], y = thetalambda_grid[,2], z = loglik_grid,  
+                      facets = NA, fit = fitpoints), main = "")
+```
+
+## Estimacion
+
+De esta forma, el **modelo especifico** mas compatible con los datos (a.k.a. el que maximiza la verosimilitud) es
+$$
+p\left(N_t,(X_{ti})_{i=1}^{N_t}\right)=\text{Bin}(n|J_t,\theta^{*}) \prod_{i=1}^{n}\text{Exp}(x|\lambda^{*}),
+$$
+con 
+\begin{eqnarray}
+\theta^{*} & = &\arg\max_{\theta\in (0,1)}lik\left(\theta|(J_t,n_t)_{t=2005}^{2007}\right) \nonumber \\
+\lambda^{*} & = &\arg\max_{\lambda\in (0,\infty)}lik\left(\lambda|(x_{t,i})_{t=2005,i=1}^{2007,n_t}\right) \nonumber.
+\end{eqnarray}

@@ -1,0 +1,121 @@
+---
+title: "Act11302-150496_t01"
+author: "Francisco Ramirez Suarez"
+date: "12/02/2019"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Para importar los datos:
+```{r Descargo, echo=FALSE, warning=FALSE}
+if(!require("repmis")){install.packages("repmis")}
+library("repmis")
+
+data <- source_data("https://github.com/JCMO-ITAM/Data4Analysis/blob/master/d4a_allstateclaim_data.csv?raw=true")
+data <- as.data.frame(data)
+```
+
+```{r, summary1, echo = FALSE}
+J <- nrow(data)
+n0 <- nrow(as.matrix(which(data$Claim_Amount==0)))
+J;n0
+```
+
+Verosimilitud Bin(N, $\theta_0$)
+Saquemos la maxima verosimilitud de la Binomial 
+---
+
+tenemos que nuestra funcion por maxima veroslimitus esta dada por:
+\begin{eqnarray}
+lik(\theta_0,\theta_c|\text{datos}) 
+& = &
+\prod_{i=1}^{J}f(x_i|\theta_0,\theta_c) \nonumber \\
+& = &
+\prod_{x_i:x_i=1}^{J}\theta_0\times (1-\theta_0)^{n-x_i} \times \prod_{x_i:x_i>0}\theta_c\exp\{-\theta_c x_i\} \nonumber \\
+& = &
+\theta_0^{n_0}  (1-\theta_0)^{JN-n_0}\times \theta_c^{J-n_0}\exp\{-\theta_c \sum_{x_i:x_i>0}x_i\}, \nonumber
+\end{eqnarray}
+
+Maxima verosimilitud 
+---
+
+El EMV para $\theta_0$ es:
+
+\begin{eqnarray}
+  \theta_0^{*}
+  & = &
+  \arg\max_{(0,1)} \theta_0^{n_0} \times (1-\theta_0)^{JN-n_0} \nonumber \\
+  & = &
+  \frac{n_0}{JN}. \nonumber
+\end{eqnarray}
+
+Con un N igual a 10000
+```{r echo=TRUE}
+N <- 10000
+theta0_star_b <- n0/(J*N)
+theta0_star_b
+```
+
+
+Podemos caluclar el error de la sig forma 
+```{r Error Bin, echo=FALSE}
+N <- 10000
+theta0_b <- seq(.001, .999, .001)
+lik_theta0_b <- dbeta(theta0_b, 1+ n0, J*N-n0+1)
+
+plot(theta0_b, lik_theta0_b, xlim=c(-0.1,1), ylim=c(0, 0.5), 
+     type = "l", ylab= "Verosimilitud", lty = 3,
+     xlab= "theta_0", las=1, main="",lwd=2,
+     cex.lab=1.5, cex.main=1.5, col = "darkorange", axes=FALSE)
+axis(1, at = seq(-0.1,1,.2)) 
+axis(2, las=1) 
+```
+
+
+Verosimilitud Poi($\theta_0$)
+---
+Podemos obtenerla de la sig forma 
+\begin{eqnarray}
+lik(\theta_0,\theta_c|\text{datos}) 
+& = &
+\prod_{i=1}^{J}f(x_i|\theta_0,\theta_c) \nonumber \\
+& = &
+\prod_{x_i:x_i=1}^{J} \frac{e^{-\theta_0} \theta_0^{x_i}}{x_i !} \times \prod_{x_i:x_i>0}\theta_c\exp\{-\theta_c x_i\} \nonumber \\
+& = &
+\frac{e^{-J \theta_0} \theta_0^{n_0}}{\prod x_i !}\times \theta_c^{J-n_0}\exp\{-\theta_c \sum_{x_i:x_i>0}x_i\}, \nonumber
+\end{eqnarray}
+
+
+Maxima verosimilitud 
+---
+Obtenemos 
+
+\begin{eqnarray}
+  \theta_0^{*}
+  & = &
+  \arg\max_{(0,1)} \frac{e^{-J \theta_0} \theta_0^{n_0}}{\prod x_i !}\nonumber \\
+  & = &
+  \frac{n_0}{J}. \nonumber
+\end{eqnarray}
+
+Con nuestros datos 
+```{r}
+theta0_star <- n0/J
+theta0_star
+```
+
+EL error esta dado por 
+```{r Error Poisson, echo=FALSE}
+N <- 1000
+theta0_p <- seq(.001, .999, .001)
+lik_theta0_p <- dgamma(theta0_p, n0+1, J)
+
+plot(theta0_p, lik_theta0_p, xlim=c(0,1), ylim = c(0,1), 
+     type = "l", ylab= "Verosimilitud", lty = 3,
+     xlab= "theta_0", las=1, main="",lwd=2,
+     cex.lab=1.5, cex.main=1.5, col = "darkorange", axes=FALSE)
+axis(1, at = seq(0,1,.2)) 
+axis(2, las=1) 
+```

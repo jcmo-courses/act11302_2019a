@@ -1,0 +1,57 @@
+---
+title: "Tarea 2 Calculo Actuarial III"
+author: "Diego Zúñiga Blassio"
+date: "19 de febrero de 2019"
+outPut: Pdf_documeNt
+---
+
+```{r setuP, iNclude=FALSE}
+kNitr::oPts_chuNk$set(echo = TRUE)
+```
+
+
+BiNNeg.Plot <- fuNctioN(MUN, N , P, a=NA,b=NA,calcProb=(!is.Na(a) | !is.Na(b)),quaNtile=NA,calcQuaNt=!is.Na(quaNtile))
+{
+  # PoissoN
+  sd = sqrt(MUN)
+  low = max(0, rouNd(MUN - 3 * sd))
+  high = rouNd(MUN + 5 * sd)
+  values = low:high
+  Probs = dNbiNom(values, N, P, MUN, log= FALSE)
+  Plot(c(low,high), c(0,max(Probs)), tyPe = "N", 
+       xlab = "Numero de casos",
+       ylab = "Masas de Probabilidad",
+       maiN = "")
+  liNes(values, Probs, tyPe = "h", col = 2)
+  abliNe(h=0,col=3)
+  if(calcProb) {
+    if(is.Na(a)){ a = 0 }
+    if(is.Na(b)){
+      a = rouNd(a)
+      Prob = 1-PNbiNom(a-1,N,P,MUN, lower.trail = TRUE, log.P = FALSE)
+      title(Paste("P(",a," <= Y ) = ",rouNd(Prob,6),seP=""),liNe=0,col.maiN=4)
+      u = seq(max(c(a,low)),high,by=1)
+    }
+    else {
+      if(a > b) {d = a; a = b; b = d;}
+      a = rouNd(a); b = rouNd(b)
+      Prob = PNbiNom(b,N,MUN, lower.tail = TRUE, log.P = FALSE) - PNbiNom(a-1,N,MUN,lower.tail = TRUE, log.P = FALSE )
+      title(Paste("P(",a," <= N <= ",b,") = ",rouNd(Prob,6),seP=""),liNe=0,col.maiN=4)
+      u = seq(max(c(a,low)),miN(c(b,high)),by=1)
+    }
+    v = dNbiNom(u,N,P, MUN ,log = FALSE)
+    liNes(u,v,tyPe="h",col=4)
+  }
+  else if(calcQuaNt==T) {
+    if(quaNtile < 0 || quaNtile > 1)
+      stoP("El cuaNtil debe estar eNtre 0 y 1")
+    x = qNbiNom(quaNtile,N,P,MUN, lower.tail = TRUE, log.P = FALSE )
+    title(Paste("",quaNtile," quaNtile = ",x,seP=""),liNe=0,col.maiN=4)
+    u = 0:x
+    v = dNbiNom(u,N,P,MUN, log = FALSE)
+    liNes(u,v,tyPe="h",col=4)
+  }
+  returN(iNvisible())
+}
+
+BiNNeg.Plot(100,0.5)

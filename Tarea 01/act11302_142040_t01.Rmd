@@ -1,0 +1,54 @@
+---
+title: "Tarea 01"
+author: "Victor Morales"
+date: "07/02/2019"
+output: pdf_document
+---
+
+# 0. Datos
+
+Los `datos` incluyen las siguientes variables:
+
+```{r dataload, echo=FALSE,warning=FALSE,message=FALSE}
+
+library("repmis")
+
+data <- source_data("https://github.com/JCMO-ITAM/Data4Analysis/blob/master/d4a_allstateclaim_data.csv?raw=true")
+
+data <- as.data.frame(data)
+colnames(data)
+data <- data[which(data$Calendar_Year==2005),]
+```
+
+La variable `Claim_Amount` representa el monto de reclamo individual, nuestros valores $x_i$.
+
+Los casos `Claim_Amount==0` representan no siniestro en la poliza correspondiente. 
+
+$J$ es el numero de polizas en los `datos`, $N$ es el numero de polizas con siniestro.
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+J <- nrow(data)
+n0 <- nrow(as.matrix(which(data$Claim_Amount==0)))
+N <- J - n0 
+J; N
+```
+
+
+# 1. Funcion de verosimilitud para modelo binomial, geometrico y Poisson
+
+Nos enfocaremos en modelar la v.a. para la frecuencia de siniestros $N$ y haremos una estimacion puntual de la probabilidad con la que ocurre un siniestro.  
+
+## Binomial
+
+Supondremos un parametro $p \in (0,1)$ para $I_{0,...,J}(N) = S_i$ que se distribuye $Bernoulli(p)$. La funcion de verosimilitud es de la forma:
+
+\[
+\mathbf{lik(p|N)} = \prod_{i=1}^J p^{S_i}(1-p)^{1-{S_i}} = p^{N}(1-p)^{J-N}
+\]
+
+Graficamos esta funcion con el valor observado $N = n$.
+
+```{r, echo=FALSE,warning=FALSE,message=FALSE}
+
+```
+
