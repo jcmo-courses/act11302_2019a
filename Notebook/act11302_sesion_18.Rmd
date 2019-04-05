@@ -1,0 +1,167 @@
+---
+title: "Sesion 18 - Distribuciones de Severidades"
+author:
+-  Juan Carlos Martinez-Ovando
+-  Departamento Academico de Actuaria
+date: "Primavera 2019"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: yes
+    self_contained: yes
+    theme: united
+    highlight: textmate
+fig_align: "center"
+fig_width: 18
+---
+
+# Datos {.tabset .tabset-fade .tabset-pills}
+
+Consideremos ahora los datos de siniestros de una **Aseguradora Danesa**.
+
+Los datos corresponden a reclamos por polizas de un seguro de edificios de una empresa danesa. La peculiaridad de estos datos es que los montos de reclamos individuales exhiben valores extremos validos. Los datos han sido empleado para ilustrar aplicaciones de diferentes documentos de investigacion.
+
+## Diccionario
+
+- `Date` STR - Fecha del reclamo.
+
+- `LossAmount` FLT - MOnto individual de reclamo.
+
+**Nota:** Los datos refieren solo a eventos de edificios siniestrados.
+
+## Exploracion
+
+```{r}
+data <- read.csv("./d4a_danishinsurancedata.cvs")
+head(data)
+data[,"logLossAmount"] <- log(data$LossAmount)
+```
+
+```{r}
+dim(data)
+hist(data$logLossAmount,50)
+summary(data$logLossAmount)
+```
+
+## Estimacion
+
+Consideramos realizar la estimacion puntual del modelo
+$$
+X_i \sim \text{Exp}(x|\theta),
+$$
+con $\theta > 0$, para $i=1,\ldots,N$.
+
+Para esto calculamos los dos parametros de interes
+$$
+N \text{ y } \sum_{i=1}^{N}x_i,
+$$
+es decir,
+
+```{r}
+N <- nrow(data)
+x.sum <- sum(as.matrix(data$logLossAmount))
+```
+
+De esta forma, el modelo estimado puntual es
+$$
+X \sim \text{Exp}(x|\hat{\theta}),
+$$
+donde
+$$
+\hat{\theta} = \left(\frac{\sum_{i=1}^{N}x_i}{N}\right)^{-1},
+$$
+es decir,
+
+```{r}
+theta.hat <- N/x.sum
+theta.hat
+```
+
+La densidad asociada con este modelo es:
+
+```
+if(!require('ggplot2')){install.packages("ggplot2")}
+library("ggplot2")
+
+x <- seq(0, 10, length.out=1000)
+dat <- data.frame(x=x, px=dexp(x, rate=theta.hat))
+ggplot(dat, aes(x=x, y=px)) + geom_line()
+```
+
+```{r}
+x.grid <- seq(0,20,.01)
+fx.grid <- dexp(x.grid,rate=theta.hat)
+plot(x.grid,fx.grid)
+```
+
+## Simulaciones
+
+Los datos simulados con el modelo estimado son:
+$$
+x^{(m)}_j \sim \text{Exp}(x|\hat{\theta}),
+$$
+para $m=1,\ldots,M$. En este caso $M$ es el numero de datos por simular.
+
+Los datos simulados tienen el siguiente comportamiento:
+
+
+```{r}
+M <- 3000
+data.sim <- rexp(M, rate = theta.hat)
+hist(data.sim,50)
+summary(data.sim)
+```
+
+# Modificacion de Esscher {.tabset .tabset-fade .tabset-pills}
+
+
+Recordemos que la modificacion de Esscher se define como
+$$
+f^{a}_X(x)=\frac{e^{ax}\text{Exp}(x|\hat{\theta})}{\int_{0}^{\infty}e^{ax'}\text{Exp}(x'|\hat{\theta})\text{d}x'},
+$$
+donde 
+$$
+\text{Exp}(x|\hat{\theta})
+$$
+denota la densidad de la distribucion $\text{Exp}(x|\hat{\theta})$.
+
+En este caso, el coeficiente $\alpha$ dneota `aversion al riesgo`. El efecto de esta modificacion lo podemos ver en la siguiente grafica:
+
+```{r}
+a1 <- 0
+fx.a1.grid <- exp(a1*x.grid) * dexp(x.grid,rate=theta.hat)
+fx.a1.grid <- fx.a1.grid / sum(fx.a1.grid)
+
+a2 <- 0.3
+fx.a2.grid <- exp(a2*x.grid) * dexp(x.grid,rate=theta.hat)
+fx.a2.grid <- fx.a2.grid / sum(fx.a2.grid)
+
+a3 <- 0.6
+fx.a3.grid <- exp(a3*x.grid) * dexp(x.grid,rate=theta.hat)
+fx.a3.grid <- fx.a3.grid / sum(fx.a3.grid)
+
+a4 <- 0.9
+fx.a4.grid <- exp(a4*x.grid) * dexp(x.grid,rate=theta.hat)
+fx.a4.grid <- fx.a4.grid / sum(fx.a4.grid)
+
+fx.a.grid <- cbind(fx.a1.grid,fx.a2.grid)
+fx.a.grid <- cbind(fx.a.grid,fx.a3.grid)
+fx.a.grid <- cbind(fx.a.grid,fx.a4.grid)
+
+matplot(as.matrix(x.grid), fx.a.grid)
+```
+
+### Valores esperados
+
+```{r}
+aux.grid <- cbind(fx.a1.grid * x.grid, fx.a2.grid * x.grid)
+aux.grid <- cbind(aux.grid, fx.a3.grid * x.grid)
+aux.grid <- cbind(aux.grid, fx.a4.grid * x.grid)
+aux.grid <- as.data.frame(aux.grid)
+colnames(aux.grid) <- c("a1","a2","a3","a4")
+colMeans(aux.grid)
+solve(theta.hat)
+```
+

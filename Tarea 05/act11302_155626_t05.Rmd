@@ -1,0 +1,83 @@
+---
+title: "Tarea5"
+author: "David Jimenez Cooper"
+clave: "155626"
+date: "21 de marzo de 2019"
+output: pdf_document
+---
+
+## Variable Antiguedad
+
+a. Construyan una variable de antiguedad del vehiculo asegurado
+
+```{r Antiguedad, include=FALSE}
+library(repmis)
+datos <- source_data("https://github.com/JCMO-ITAM/Data4Analysis/blob/master/d4a_allstateclaim_data.csv?raw=true")
+
+antiguedad <- datos$Calendar_Year-datos$Model_Year
+datos[,'Antiguedad'] <- antiguedad
+
+```
+
+## Variable categoria
+
+b. Con base en la variable de antiguedad, definan tres categorias: 
+i) ultimo modelo, ii) tres anios de antiguedad, y iii) mas de tres anios de antiguedad.
+
+```{r Categoria, include=FALSE}
+datos[,"Categoria"] <- 1
+datos[which(datos$Antiguedad<=3),"Categoria"] <- 2
+datos[which(datos$Antiguedad>3),"Categoria"] <- 3
+datos[which(datos$Antiguedad==0),"Categoria"] <- 1
+```
+
+#Modelaje por segmento
+
+c. Definan un modelo para cada grupo, como el visto en clase en la sesion anterior, y distingan si el supuesto de homogeneidad se preserva o en que capas no se preserva.
+
+
+```{r Modelaje, echo=TRUE}
+datos[,"iota"] <- 0
+datos[which(datos$Claim_Amount>0),"iota"] <- 1
+
+#Categoria 1: ultimo modelo
+
+datos1=datos[which(datos$Categoria==1),]
+
+datos1_n <- sum(datos1$iota)
+datos1_J <- nrow(datos1)
+datos1_xsum <- sum(datos1[which(datos1$iota==1),"Claim_Amount"])
+
+theta_star1 <- datos1_n/datos1_J
+lambda_star1 <- (datos1_xsum / datos1_n)^(-1)
+
+#Categoria 2: tres anios de antiguedad
+
+datos2=datos[which(datos$Categoria==2),]
+
+datos2_n <- sum(datos2$iota)
+datos2_J <- nrow(datos2)
+datos2_xsum <- sum(datos2[which(datos2$iota==1),"Claim_Amount"])
+
+theta_star2 <- datos2_n/datos2_J
+lambda_star2 <- (datos2_xsum / datos2_n)^(-1)
+
+#Categoria 3: mas de tres anios de antiguedad
+
+datos3=datos[which(datos$Categoria==3),]
+
+datos3_n <- sum(datos3$iota)
+datos3_J <- nrow(datos3)
+datos3_xsum <- sum(datos3[which(datos3$iota==1),"Claim_Amount"])
+
+theta_star3 <- datos3_n/datos3_J
+lambda_star3 <- (datos3_xsum / datos3_n)^(-1)
+
+theta <- c(theta_star1,theta_star2,theta_star3)
+lamda <- c(lambda_star1,lambda_star2,lambda_star3)
+
+modelos=data.frame(theta,lamda)
+View(modelos)
+```
+
+Notemos que los parametros de cada año son muy parecidos y por ello si podriamos asumir homogeneidad en los moelos de cada año

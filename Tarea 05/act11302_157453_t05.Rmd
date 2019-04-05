@@ -1,0 +1,129 @@
+---
+title: "act11302_157453_t05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r}
+data <- read.csv("./d4a_allstateclaim_data.csv")
+head(data)
+
+data_x <- data[which(data$iota==1),"Claim_Amount"]
+data_t <- data[which(data$iota==1),"Calendar_Year"]
+(S_t <- rowsum(data_x, data_t))
+
+S_t <- ts(S_t,start = c(2005), frequency = 1)
+plot(S_t)
+
+data_x1 <- data[which(data$iota==1 & data$Calendar_Year==2005),"Claim_Amount"]
+summary(data_x1)
+
+
+data_x2 <- data[which(data$iota==1 & data$Calendar_Year==2006),"Claim_Amount"]
+summary(data_x2)
+
+
+data_x3 <- data[which(data$iota==1 & data$Calendar_Year==2007),"Claim_Amount"]
+summary(data_x3)
+
+
+data_x <- data[which(data$iota==1),c("Calendar_Year","Claim_Amount")]
+data_x$Calendar_Year <- as.factor(data_x$Calendar_Year)
+colnames(data_x)
+
+
+theta_grid <- seq(0,1,0.01)
+lambda_grid <- seq(0,1000,1)
+if(!require('lattice')){install.packages("lattice")}
+
+
+library("lattice")
+data_n <- sum(data$iota)
+data_J <- nrow(data)
+data_xsum <- sum(data[which(data$iota==1),"Claim_Amount"])
+theta <- data_n/x1; lambda <- (data_xsum / data_n)
+loglikelihood <- function(theta,lambda,data_n,data_x1,data_xsum){
+  loglik.theta <- data_n*log(theta) + (data_x1-data_n)*log(1-theta)
+  loglik.lambda <- data_n*log(lambda) -lambda*data_xsum
+  loglik <- loglik.theta + loglik.lambda
+  return(loglik)
+}
+loglikelihood(theta,lambda,data_n,data_x1,data_xsum)
+
+
+
+thetalambda_grid <- expand.grid( x = theta_grid, y = lambda_grid)
+dim(thetalambda_grid)
+
+
+loglik_grid <- matrix(NaN,ncol=1,nrow=nrow(thetalambda_grid))
+G <- nrow(thetalambda_grid)
+g <- 1
+for(g in 1:G){loglik_grid[g] <- loglikelihood(thetalambda_grid[g,1],thetalambda_grid[g,2],data_n,data_x1,data_xsum)}
+
+
+
+loglikelihood <- function(theta,lambda,data_n,data_x2,data_xsum){
+  loglik.theta <- data_n*log(theta) + (data_x2-data_n)*log(1-theta)
+  loglik.lambda <- data_n*log(lambda) -lambda*data_xsum
+  loglik <- loglik.theta + loglik.lambda
+  return(loglik)
+}
+loglikelihood(theta,lambda,data_n,data_x2,data_xsum)
+
+
+
+thetalambda_grid <- expand.grid( x = theta_grid, y = lambda_grid)
+dim(thetalambda_grid)
+
+
+loglik_grid <- matrix(NaN,ncol=1,nrow=nrow(thetalambda_grid))
+G <- nrow(thetalambda_grid)
+g <- 1
+for(g in 1:G){loglik_grid[g] <- loglikelihood(thetalambda_grid[g,1],thetalambda_grid[g,2],data_n,data_x2,data_xsum)}
+
+
+
+loglikelihood <- function(theta,lambda,data_n,data_x3,data_xsum){
+  loglik.theta <- data_n*log(theta) + (data_x3-data_n)*log(1-theta)
+  loglik.lambda <- data_n*log(lambda) -lambda*data_xsum
+  loglik <- loglik.theta + loglik.lambda
+  return(loglik)
+}
+loglikelihood(theta,lambda,data_n,data_x1,data_xsum)
+
+
+
+thetalambda_grid <- expand.grid( x = theta_grid, y = lambda_grid)
+dim(thetalambda_grid)
+
+
+loglik_grid <- matrix(NaN,ncol=1,nrow=nrow(thetalambda_grid))
+G <- nrow(thetalambda_grid)
+g <- 1
+for(g in 1:G){loglik_grid[g] <- loglikelihood(thetalambda_grid[g,1],thetalambda_grid[g,2],data_n,data_x3,data_xsum)}
+
+´´´

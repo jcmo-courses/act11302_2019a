@@ -1,0 +1,305 @@
+---
+title: ACT-11302 Calculo Actuarial III
+subtitle: Sesion 15 - Agregacion de Riesgos - Parte 3/4
+author: Juan Carlos Martinez-Ovando
+institute: Departamento Academico de Actuaria y Seguros
+titlegraphic: /svm-r-sources/ITAM2016.png
+fontsize: 10pt
+output:
+ beamer_presentation:
+    template: ~/svm-r-sources/svm-latex-beamer.tex
+    keep_tex: true
+# toc: true
+    slide_level: 2
+ ioslides_presentation:
+    smaller: true
+    logo: ~/svm-r-sources/ITAM2016.png
+make149: true
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+---
+
+## Objetivo de la sesion
+
+* Estudiar y comprender el uso de `aproximaciones asintoticas` para estimar la distribucion del monto agregado de siniestros $F_S(s)$ de un periodo de operacion dado.
+
+---
+
+## 4. Aproximacion analitica
+
+* La aproximacion analitica para $F_{S_t}(s)$ descansa en el Teorema Central de Limite (TCL), argumentando que la composicion del portafolio, $J_t$, es relativamente `grande`.
+
+* **Supone** que la media y varianza de $S_t$, $\mu_{S_t}=\mathbb{E}(S_t)$ y $\sigma^2_{S_t}=var(S_t)$ son conocidas.
+
+* En la practica, ambos parametros son `estimados puntualmente` de alguna forma.
+
+--- 
+
+De acuerdo a lo anterior, **teoricamente** se sigue que cuando $J_t\rightarrow\infty$, la distribucion del **monto agregado de siniestros** puede aproximarse como:
+
+\begin{eqnarray}
+F_{S_t}(s)
+ & = &
+ \mathbb{P}\left(S_t \leq s\right)
+ \nonumber \\
+ & = &
+ \mathbb{P}\left(\frac{S_t-\mu_{S_t}}{\sigma_{S_t}}\leq \frac{s-\mu_{S_t}}{\sigma_{S_t}}\right)
+ \nonumber \\
+ & \approx &
+ \mathbb{P}\left( Z \leq \frac{s-\mu_{S_t}}{\sigma_{S_t}}\right)
+ \nonumber \\
+ & \approx &
+ N\left( S_t | \mu_{S_t}, \sigma^2_{S_t}\right),
+ \nonumber
+\end{eqnarray}
+donde $Z$ es una variable aleatoria con,
+$$
+Z \sim N(z|0,1).
+$$ 
+
+--- 
+
+Como anticipamos, **en la practica** los parametros $\mu_{S_t}$ y $\sigma_{S_t}$ son desconocidos, pero se `estiman puntualmente` como
+\begin{eqnarray}
+\mu_{S_t} & = & J_t \widehat{\mu}_{X_t} \nonumber \\
+\mu_{S_t} & = & J_t \widehat{\sigma}_{X_t}, \nonumber
+\end{eqnarray}
+donde $\widehat{\mu}_{X_t}$ y $\widehat{\sigma}_{X_t}$ son los `estimadores puntuales` de la **severidad individual media** y de la **desviacion estandar de la severidad individual**, respectivamente.
+
+Asi, se sigue
+\begin{eqnarray}
+F_{S_t}(s)
+ & \approx &
+ \mathbb{P}\left( Z \leq \frac{s-\widehat{\mu}_{S_t}}{\widehat{\sigma}_{S_t}}\right)
+ \nonumber \\
+ & \approx &
+ N\left( S_t | \widehat{\mu}_{S_t}, \widehat{\sigma}^2_{S_t}\right).
+ \nonumber
+\end{eqnarray}
+
+---
+
+**Comentarios** 
+
+* El resultado anterior presupone que las severidades individuales, $(X_{tj})_{j=1}^{J_t}$, son `iid`. 
+
+* El resultado asintotico anterior tambien es valido solo en el caso que $$var(X_t<\infty,$$ (o equivalentemente, sujeto a $\mathbb{E}\left(X_t^{2}\right)$ sea finito). 
+
+* La condicion anterior se cumple solo en el caso en el que las severidades individuales sean de _riesgo moderado_, i.e. que no exista prevalencia de riesgos indidividuales grandes. 
+
+* Desde un punto de vista probabilistico, se sigue cuando el la distribucion del reclamo individual no sea de colas pesada (i.e. que no exhiba valores extremos).
+
+---
+
+**Comentarios** 
+
+* La aproximacion basada en el TCL resulta ser eficiente para aproximar $F_{S_t}(s)$ en la region concentrada en $\mu_{S_t}$ (*monto agregado de riesgo esperado*).
+
+* **Sin embargo**, esta aproximacion puede ser imprecisa cuando deseemos estudiar alguna region extrema (generalmente la derecha) de la distribucion $F_{S_t}(s)$.
+
+En tal circunstancia, es recomendable invocar a una `aproximacion asintotica ad-hoc`, como veremos a continuacion.
+
+---
+
+### 4.1. Aproximacion analitica modificada por sesgo
+
+Previniendo que el monto agregado de siniestros, $S_t$, pueda exhibir sesgos en su distribucion, debido principalmente a que tiene soporte en la recta real positiva, pero tambien a sesgos en:
+
+* la distribucion de los reclamos individuales
+
+* distribucion del numero de reclamos a traves de $\theta$,
+
+se ha desarrollado una approximacion analitica alternativa a la del TCL.
+
+Esta aproximacion descansa en la distribucion **gamma trasladada** con tres parametros, dada por
+
+\begin{eqnarray}
+F_{S_t}(s) 
+  & \approx &
+  Ga\left(s-s_{0t}|\alpha_{t},\beta_{t}\right),
+\end{eqnarray}
+donde 
+
+* $s_{0t}$ es un parametro de traslacion,
+
+* $\alpha_t$ es un parametro de forma,
+
+* $\beta_t$ es un parametro de escala.
+
+---
+
+El kernel de la distribucion gamma en cuestion es de la forma
+$$
+Ga\left(s-s_{0t}|\alpha_t,\beta_t\right)
+  \propto
+  (s-s_{0t})^{\alpha_t-1} \exp\{-\beta_t (s-s_{0t})\}\mathbb{I}_{[s_{0t},\infty)}(s).
+$$
+
+* Noten que el parametro $s_{0t}$ no solo desplaza la distribucion, sino que modifica el soporte de la misma.
+
+---
+
+**Comentarios**
+
+* Al igual que la aproximacion basada en el TCL, esta aproximacion presupone que los parametros $(s_{0t},\alpha_t,\beta_t)$ son conocidos.
+
+* En la practica, estos parametros deben `estimarse puntualmente`. La aproximacion, en este caso, descansara en el **metodo de momentos (MM).**
+
+
+---
+
+### 4.2. Calibracion por el metodo de momentos
+
+**El MM consiste en elegir los `valores expecificos de los parametros` de una distribucion de tal forma que los `primeros momentos teoricos` de la distribucion sean iguales a los `primeros momentos muestrales` de los datos.**
+
+* En nuestro caso, deseamos que los `primeros tres momentos teoricos` coincidan con los `primeros tres momentos muestrales` de la *distribucion gamma trasladada*.
+
+Los `primeros tres momentos teoricos` de esta distribucion son:
+
+\begin{eqnarray}
+\mathbb{E}_{F_{S_t}}(S_t)
+  & = &
+  s_{0t} + \frac{\alpha_{t}}{\beta_{t}}
+  \nonumber \\
+\text{var}_{F_{S_t}}(S_{t})
+  & = &
+  \frac{\alpha_{t}}{\beta_{t}^{2}}
+  \nonumber \\
+\text{sesgo}_{F_{S_t}}(S_{t})
+  & = &
+  \frac{2}{\alpha_{t}^{1/2}}.
+  \nonumber
+\end{eqnarray}
+
+---
+
+Considerando que 
+\begin{eqnarray}
+\widehat{\mu}_{S_t} & = & \widehat{\mathbb{E}(S_t)} \nonumber \\
+\widehat{\sigma}_{S_t} & = & \widehat{\text{var}(S_t)^{1/2}} \nonumber \\
+\widehat{\gamma}_{S_t} & = & \widehat{\text{sesgo}(S_t)}, \nonumber
+\end{eqnarray}
+son los `estimadores muestrales puntuales` de los tres momentos, planteamos el sistema de ecuaciones del MM:
+\begin{eqnarray}
+\widehat{\mu}_{S_t} & = & s_{0t} + \frac{\alpha_{t}}{\beta_{t}}  \\
+\widehat{\sigma}_{S_t} & = & \frac{\alpha_{t}}{\beta_{t}^{2}}  \\
+\widehat{\gamma}_{S_t} & = & \frac{2}{\alpha_{t}^{1/2}}. 
+\end{eqnarray}
+
+
+---
+
+Resolviendo las ecuaciones (2)-(4), identificamos `estimadores puntuale del MM` de los tres parametros, como:
+\begin{eqnarray}
+\widehat{\alpha}_{t}
+  & = &
+  \frac{4}{\widehat{\gamma}_{S_t}},
+  \nonumber \\
+\widehat{\beta}_{t}
+  & = &
+  \frac{2}{\widehat{\gamma}_{S_t}\widehat{\sigma}_{S_t}},
+  \nonumber \\
+\widehat{s}_{t0}
+  & = &
+  \widehat{\mu}_{S_t} - 2\frac{\widehat{\sigma}_{S_t}}{\widehat{\gamma}_{S_t}}.
+  \nonumber
+\end{eqnarray}
+
+**Es decir,** tenemos que 
+$$
+F_{S_t}(s)\approx Ga\left(s-\widehat{s}_{0t}|\widehat{\alpha}_t,\widehat{\beta}_t\right).
+$$
+
+---
+
+**Comentarios**
+
+* Esta aproximacion es valida solo en el caso en que $\text{sesgo}(S_t)>0$. 
+
+* En el caso limite cuando $\text{sesgo}(S_t)\rightarrow 0$ se tiene que la aproximacion gamma trasladada converge a la aproximacion normal inducida por el TCL. 
+
+**El ultimo punto es un ejercicio de TAREA para entregarse.**
+
+---
+
+### 4.3. Aproximacion analitica modificada por sesgo
+
+Consideremos una aproximacion adicional a $F_S(s)$ basada en el ajuste a los primeros tres momentos de su distribucion.
+
+La nueva aproximacion hace referencia a la distribucion `normal potencia`. 
+
+Considerando que los `parametros teoricos` $\mathbb{E}_{F_{S_t}}(S_t)$, $\text{var}_{F_{S_t}}(S_t)$ y $\text{sesgo}_{F_{S_t}}(S_t)$ son conocidos, tenemos
+\begin{eqnarray}
+\mathbb{P}\left( \frac{S_t-\mathbb{E}(S_t)}{sd(S_t)} \leq s+\frac{sesgo(S_t)}{6}(s^2-1)\right)
+  & \approx &
+  N(s|0,1).
+  \nonumber
+\end{eqnarray}
+
+--- 
+
+**Comentarios**
+
+* Al igual que con la `aproximacion gamma trasladada`, partimos del supuesto que $\mathbb{E}(S_t)$, $var(S_t)$ y $sesgo(S_t)$ son conocidos (con $sesgo(S_t)>0$). 
+
+* **En la practica,** estos tres parametros tienen que estimarse. 
+
+Considerando que 
+\begin{eqnarray}
+\widehat{\mu}_{S_t} & = & \widehat{\mathbb{E}(S_t)} \nonumber \\
+\widehat{\sigma}_{S_t} & = & \widehat{\text{var}(S_t)^{1/2}} \nonumber \\
+\widehat{\gamma}_{S_t} & = & \widehat{\text{sesgo}(S_t)}, \nonumber
+\end{eqnarray}
+son los `estimadores muestrales puntuales` de los tres momentos, tenemos el siguiente resultado.
+
+---
+
+La `tercera aproximacion asintotica` es de la forma:
+
+\begin{eqnarray}
+\mathbb{P}\left( \frac{S_t-\widehat{\mu}_{S_t}}{\widehat{\sigma}_{S_t}} \leq s \right)
+  & \approx &
+  N\left( \left( \frac{9}{\widehat{\gamma}_{S_t}^2} + \frac{6s}{\widehat{\gamma}_{S_t}} + 1\right)^{1/2} 
+  - \frac{3}{\widehat{\gamma}_{S_t}}|0,1\right)
+  \nonumber\\
+  & = &
+  N\left( \underbrace{\left( \frac{9}{\widehat{\gamma}_{S_t}^2} + \frac{6s}{\widehat{\gamma}_{S_t}} + 1\right)^{1/2} 
+  - \frac{3}{\widehat{\gamma}_{S_t}}}_{\text{argumento}}|\underbrace{0,1}_{\text{parametros}}\right),
+  \nonumber
+\end{eqnarray}
+para cualquier valor de $s \geq 1$. 
+
+---
+
+**Comentario**
+
+* La `tercera aproximacion asintitica` es particularmente valida cuando para valores $s\geq 1$.
+
+* En casos donde $s < 1$ (poco empleados), la aproximacion asintotica TCL o basada en la distribucion `gamma trasladada` seran mejores.
+
+
+---
+
+## Comentarios de la sesion
+
+* Hemos estudiado `tres aproximaciones asintoticas` de la distribucion de montos agregados $F_{S_t}(s)$.
+
+* Las tres aproximaciones descansan en el supuesto que los montos individuales tienen momentos finitos:
+
+  * Para `TCL` suponemos que $\mathbb{E}(X^2_t)<\infty$.
+
+  * Para `gamma trasladada` y `modificada por sesgo` suponemos que $\mathbb{E}(X^3_t)<\infty$.
+
+* De esta forma, `TCL` es valida en el caso donde la distribiucion de los montos individuales de siniestros *no es de colas pesadas*. 
+
+* Sin embargo, `gamma trasladada` y `modificada por sesgo` son dos aproximacion que pueden emplearse en casos donde la distribucion de los montos individuales si es de *valores extremos*. 
+
+---
+
+## Temas siguientes
+
+* Recursiones en le modelo de riesgo colectivo (Recursion de De Pril y Panjer)
+

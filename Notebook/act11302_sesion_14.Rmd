@@ -1,0 +1,50 @@
+---
+title: "Sesion 14 - Laboratorio de Segmentacion"
+author:
+-  Juan Carlos Martinez-Ovando
+-  Departamento Academico de Actuaria
+date: "Primavera 2019"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: yes
+    self_contained: yes
+    theme: united
+    highlight: textmate
+fig_align: "center"
+fig_width: 18
+---
+
+# Modelo de agregada de riesgo {.tabset .tabset-fade .tabset-pills}
+
+Consideremos de nuevo los datos del portafolio `AllState`:
+
+```{r}
+data <- read.csv("./d4a_allstateclaim_data.csv")
+head(data)
+```
+La sesion pasada estudiamos e implementamos un procedimiento numerico para la agregacion de riesgos del portafolio basados en un modelo `Bernoulli-Exponencial` (**enfoque individual de riesgos**) y el modelo `Binomial-Exponencial` (**enfoque colectivo de riesgos**).
+
+En esta ocasion, exploraremos un componente mas de modelacion, basado en un procedimiento de segmentacion.
+
+# Segmentacion
+
+Las segmentaciones de datos pueden realizase de dos formas:
+
+1. Segmentacion supervizada (con base en variables intrinsecas conocidas)
+
+2. Segmentacion no supervizada (con base en variables no conocidas)
+
+## Segmentacion supervizada
+
+Aqui exploraremos la opcion (1) con base en la segmentacion supervisada de riesgos basada en la entiguedad del vehiculo.
+
+Con este proposito, sigan las siguietes acciones:
+
+a. Construyan una variable de antiguedad del vehiculo asegurado
+
+b. Con base en la variable de antiguedad, definan tres categorias: i) ultimo modelo, ii) tres anios de antiguedad, y iii) mas de tres anios de antiguedad.
+
+c. Definan un modelo para cada grupo, como el visto en clase en la sesion anterior, y distingan si el supuesto de homogeneidad se preserva o en que capas no se preserva.

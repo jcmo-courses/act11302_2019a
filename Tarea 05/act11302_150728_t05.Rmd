@@ -1,0 +1,67 @@
+---
+title: "act11302_150728_t05"
+author: "Rodrigo Tinoco Martinez"
+date: "18/3/2019"
+output:
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r cars}
+summary(cars)
+
+#Pregunta 1: Respecto a 2.3.4 se puede observar que el valor del maximo disminuye mucho, pasando de $6442 en 2005 a $3679 en 2007, a pesar de que el tamanio de la muestra aumento. Esto me lleva a pensar que la aseguradora mejoro el perfil de los asegurados imponiendo requisitos mas fuertes en sus polizas. 
+# Es muy imporbable que los parametros estimados sean iguales a traves del tiempo dado que hay muchas variables que cambian de anio a anio. Por esta razon es necesario hacer estimaciones de los parametros para cada periodo. 
+
+#Pregunta 3: Se puede calcular theta separado de lambda porque asumimos una muestra de variables aleatorias iid. Esto permite que cada estimador se calcule por separado sin que afecte el resultado. Si los datos no se toman como una muestra aleatoria, es decir, que las variables aleatorias no fueran iid, no se podr??a hacer inferencia sobre los estimadores por separado. 
+
+```
+
+```{r log-like}
+
+if(!require("repmis")){install.packages("repmis")}
+library("repmis")
+data <- source_data("https://github.com/JCMO-ITAM/Data4Analysis/blob/master/d4a_allstateclaim_data.csv?raw=true")
+
+data <- as.data.frame(data)
+data[,"iota"] <- 0
+data[which(data$Claim_Amount>0),"iota"] <- 1
+table(data[,c("Calendar_Year","iota")])
+
+theta_grid <- seq(0,1,0.01)
+lambda_grid <- seq(0,1000,1)
+if(!require('lattice')){install.packages("lattice")}
+library("lattice")
+data_n <- sum(data$iota)
+data_J <- nrow(data)
+data_xsum <- sum(data[which(data$iota==1),"Claim_Amount"])
+theta <- data_n/data_J; lambda <- (data_xsum / data_n)
+loglikelihood <- function(theta,lambda,data_n,data_J,data_xsum){
+  loglik.theta <- data_n*log(theta) + (data_J-data_n)*log(1-theta)
+  loglik.lambda <- data_n*log(lambda) -lambda*data_xsum
+  loglik <- loglik.theta + loglik.lambda
+  return(loglik)
+}
+loglikelihood(theta,lambda,data_n,data_J,data_xsum)
+thetalambda_grid <- expand.grid( x = theta_grid, y = lambda_grid)
+dim(thetalambda_grid)
+loglik_grid <- matrix(NaN,ncol=1,nrow=nrow(thetalambda_grid))
+G <- nrow(thetalambda_grid)
+g <- 1
+for(g in 1:G){loglik_grid[g] <- loglikelihood(thetalambda_grid[g,1],thetalambda_grid[g,2],data_n,data_J,data_xsum)}
+
+if(!require('plot3D')){install.packages("plot3D")}
+library("plot3D")
+
+loglik_grid <- replace(loglik_grid, loglik_grid==-Inf, -10000000)
+
+scatter3D(thetalambda_grid[,1], thetalambda_grid[,2], loglik_grid, 
+          pch = 18, cex = 2, 
+          theta = 70, phi = 30, type = "p",
+          xlab = "Theta", ylab = "Lambda", zlab = "log-lik",
+          main ="Theta y Lambda log-like")
+```
+

@@ -1,0 +1,213 @@
+---
+title: "Tarea 5"
+author: "Diego Zuñiga Blassio 155890"
+date: "19 de marzo de 2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+Consideremos los datos de `AllState` nuevamente:
+
+```{r}
+data <- read.csv("./d4a_allstateclaim_data.csv")
+head(data)
+```
+
+
+$$
+\iota_{tj} = 
+\begin{cases}
+1, & \text{ poliza }j, \text{ siniestrada en }t\\
+0, & \text{ e.o.c. },
+\end{cases}
+$$
+para $t=2005,2006,2007$ y $j=1,\ldots,J_t$.
+
+```{r}
+data <- as.data.frame(data)
+data[,"iota"] <- 0
+data[which(data$Claim_Amount>0),"iota"] <- 1
+table(data[,c("Calendar_Year","iota")])
+```
+
+De esta forma, tenemos que la suscripcion $J_t$ para los tres anios, es:
+
+```{r}
+table(data$Calendar_Year)
+```
+
+
+$$
+N_t=\sum_{j=1}^{J_t}\iota_{tj},
+$$
+
+
+```{r}
+table(data[which(data$iota==1),"Calendar_Year"])
+```
+
+
+$$
+N_t \sim \text{Bin}(n|J_t,\theta_t),
+$$
+
+```{r}
+theta_est <- as.matrix(table(data[which(data$iota==1),"Calendar_Year"])) / as.matrix(table(data$Calendar_Year))
+theta_est <- as.data.frame(theta_est)
+colnames(theta_est) <- c("Theta_ML")
+theta_est <- ts(theta_est,start = c(2005), frequency = 1)
+theta_est
+plot(theta_est)
+```
+
+
+
+```{r}
+data_x <- data[which(data$iota==1),"Claim_Amount"]
+data_t <- data[which(data$iota==1),"Calendar_Year"]
+(S_t <- rowsum(data_x, data_t))
+```
+
+
+```{r}
+S_t <- ts(S_t,start = c(2005), frequency = 1)
+plot(S_t)
+```
+
+
+```{r}
+data_x1 <- data[which(data$iota==1 & data$Calendar_Year==2005),"Claim_Amount"]
+summary(data_x1)
+```
+
+```{r}
+hist(data_x1,100)
+```    
+
+### Para 2006
+
+```{r}
+data_x2 <- data[which(data$iota==1 & data$Calendar_Year==2006),"Claim_Amount"]
+summary(data_x2)
+```
+
+```{r}
+hist(data_x2,100)
+```    
+
+
+### Para 2007
+
+```{r}
+data_x3 <- data[which(data$iota==1 & data$Calendar_Year==2007),"Claim_Amount"]
+summary(data_x3)
+```
+
+```{r}
+hist(data_x3,100)
+```  
+
+
+
+```{r}
+data_x <- data[which(data$iota==1),c("Calendar_Year","Claim_Amount")]
+data_x$Calendar_Year <- as.factor(data_x$Calendar_Year)
+colnames(data_x)
+if(!require('ggplot2')){install.packages("ggplot2")}
+library("ggplot2")
+ggplot(data = data_x, aes(x = Calendar_Year, y = Claim_Amount)) +
+  geom_boxplot(aes(fill = Calendar_Year), width = 0.8) + theme_bw()
+```
+
+
+$$
+\{n_t,(x_{ti})_{i=1}^{n_t}\},
+$$
+
+$$
+\{n_t,(x_{ti})_{i=1}^{n_t}\},
+$$
+
+buscaremos encontrar los parametros
+$$
+(\theta,\lambda) \in (0,1)\times (0,\infty),
+$$
+mas adecuados.
+
+
+
+```{r}
+theta_grid <- seq(0,1,0.01)
+lambda_grid <- seq(0,1000,1)
+if(!require('lattice')){install.packages("lattice")}
+library("lattice")
+data_n <- sum(data$iota)
+data_J <- nrow(data)
+data_xsum <- sum(data[which(data$iota==1),"Claim_Amount"])
+theta <- data_n/data_J; lambda <- (data_xsum / data_n)
+loglikelihood <- function(theta,lambda,data_n,data_J,data_xsum){
+  loglik.theta <- data_n*log(theta) + (data_J-data_n)*log(1-theta)
+  loglik.lambda <- data_n*log(lambda) -lambda*data_xsum
+  loglik <- loglik.theta + loglik.lambda
+  return(loglik)
+}
+loglikelihood(theta,lambda,data_n,data_J,data_xsum)
+thetalambda_grid <- expand.grid( x = theta_grid, y = lambda_grid)
+dim(thetalambda_grid)
+loglik_grid <- matrix(NaN,ncol=1,nrow=nrow(thetalambda_grid))
+G <- nrow(thetalambda_grid)
+g <- 1
+for(g in 1:G){loglik_grid[g] <- loglikelihood(thetalambda_grid[g,1],thetalambda_grid[g,2],data_n,data_J,data_xsum)}
+```
+
+```
+if(!require('plot3D')){install.packages("plot3D")}
+library("plot3D")
+
+scatter3D(thetalambda_grid[,1], thetalambda_grid[,2], loglik_grid, 
+          pch = 18, cex = 2, 
+          theta = 20, phi = 20, ticktype = "detailed",
+          xlab = "theta", ylab = "lambda", zlab = "log-lik",  
+          surf = list(x = thetalambda_grid[,1], y = thetalambda_grid[,2], z = loglik_grid,  
+                      facets = NA, fit = fitpoints), main = "")
+```
+
+## Estimacion
+
+De esta forma, el **modelo especifico** mas compatible con los datos (a.k.a. el que maximiza la verosimilitud) es
+$$
+p\left(N_t,(X_{ti})_{i=1}^{N_t}\right)=\text{Bin}(n|J_t,\theta^{*}) \prod_{i=1}^{n}\text{Exp}(x|\lambda^{*}),
+$$
+con 
+\begin{eqnarray}
+\theta^{*} & = &\arg\max_{\theta\in (0,1)}lik\left(\theta|(J_t,n_t)_{t=2005}^{2007}\right) \nonumber \\
+\lambda^{*} & = &\arg\max_{\lambda\in (0,\infty)}lik\left(\lambda|(x_{t,i})_{t=2005,i=1}^{2007,n_t}\right) \nonumber.
+\end{eqnarray}
+```{r}
+thetalambda_grid <- expand.grid( x = theta_grid, y = lambda_grid)
+dim(thetalambda_grid)
+```
+
+```{r}
+G <- 1000000
+loglik_grid <- matrix(NaN,ncol=1, G)
+g <- 1
+for(g in 1:G){loglik_grid[g] <- loglikelihood(thetalambda_grid[g,1],thetalambda_grid[g,2],data_n,data_J,data_xsum)}
+```
+
+```{r}
+if(!require('plot3D')){install.packages("plot3D")}
+library("plot3D")
+
+loglik_grid<-replace(loglik_grid, loglik_grid==-Inf, -22222222)
+dim(loglik_grid)
+
+
+scatter3D(thetalambda_grid[1:G,1], thetalambda_grid[1:G,2], loglik_grid, 
+          pch = 18, cex = 2, 
+          theta = 20, phi = 20, ticktype = "detailed",
+          xlab = "theta", ylab = "lambda", zlab = "log-lik", main = "")
+
+```

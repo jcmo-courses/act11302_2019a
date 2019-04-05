@@ -1,0 +1,348 @@
+---
+title: "Sesion 19 - Calculo de Eventos Extremos"
+author:
+-  Juan Carlos Martinez-Ovando
+-  Departamento Academico de Actuaria
+date: "Primavera 2019"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: yes
+    self_contained: yes
+    theme: united
+    highlight: textmate
+fig_align: "center"
+fig_width: 18
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Riesgos extremos  {.tabset .tabset-fade .tabset-pills}
+
+Revisaremos en esta sesion la forma de aproximar la probabilidad de la cola (i.e. _tail probability_), valor en riesgo (VaR) y valor en riesgo condicional (ES) del riesgo agregado
+$$
+S 
+= \sum_{j=1}^N X_j
+$$
+donde 
+
+* $N \sim Po(\lambda)$
+
+* $X_j$s se distribuyen $LN(\mu, \sigma^2)$
+
+Es decir, trabajamos en el contexto del enfoque de `riesgo colectivo`.
+
+## Observacion
+
+Como comentamos en clase, la distribucion del monto agregado de siniestros,
+$$
+F_S(s)=\sum_{n=0}^{\infty} F^{*(n)}_X(s)p_n,
+$$
+depende fundamentalmente del calculo de $ F^{*(n)}_X(s)$, la convolucion de orden $n$ de la distribucion log-normal $LN(\mu, \sigma^2)$, la cual no puede obtenerse de manera sencilla.
+
+De esta forma, en esta sesion calcularmos $F_S(s)$ mediante:
+
+* Aproximaciones asintoticas
+
+* Calculos por recursiones.
+
+El ultimo se define con base en la discretizacion de $F_X(x)=LN(x|\mu, \sigma^2)$.
+
+## Otras observaciones
+
+* Trabajaremos en el caso en que los parametros $(\lambda,\mu,\sigma^2)$ son conocidos.
+
+* El `modulo` de **incertidumbre epistemica** es descartado, en este caso.
+
+## Variables iniciales
+
+Empezamos definiendo algunas variables iniciales. Fijamos la tasa de intensidad de la distribucion Poisson (`lambda`), los parametros de media y varianza de la distribucion log-normal (`mu` y `sigma`, respectivamente), el umbral cuantilico (`q`) y el nivel cuantilico (`alpha`) para el calculo del VaR y ES.
+
+```{r}
+lambda <- 50
+mu <- 5
+sigma <- 1
+q <- 20000
+alpha <- 0.99
+```
+
+Definimos una funcion para calcular el primer momento de $F^{*(n)}(_X$, la distribucion de orden $n$ de la distribucion log-normal. 
+```{r}
+LN.moment <- function(n, mu, sigma){
+  # 
+  exp(n * mu + (n * sigma)^2 / 2)
+}
+```
+
+Con base en esta funcion, calculamos:
+
+* Valor esperado de $S$
+
+* Varianza de $S$
+
+* Sesgo de $S$,
+
+con el conocimiento que $S$ tiene una distribucion Poisson compuesta, con parametro de intensidad $\lambda$. En cuyo caso,
+
+\begin{eqnarray}
+\mathbb{E}(S) 
+  & = &
+  \mathbb{E}(N) * \mathbb{E}(X) 
+  %= \lambda * \mathbb{E}(X)
+  \nonumber \\
+var(S)
+ & = & 
+ \mathbb{E}(N) * var(X) + var(N) * \mathbb{E}(X)^2
+ %= \lambda * (var(X) + \mathbb{E}(X)^2) 
+ \nonumber \\
+skew(S)
+ & = &
+ \mathbb{E}(((S-\mathbb{E}(S))/sd(S))^3)
+\end{eqnarray}
+
+En `R` obtenemos estas caracteristicas empleando el siguiente codigo.
+
+```{r}
+E.S <- lambda * LN.moment(1, mu, sigma)
+var.S <- lambda * LN.moment(2, mu, sigma)
+skew.S <- LN.moment(3, mu, sigma) / sqrt(lambda * (LN.moment(2, mu, sigma))^3)
+FS.momentos <- as.data.frame(c(E.S,var.S,skew.S))
+colnames(FS.momentos ) <- c("F_S")
+rownames(FS.momentos ) <- c("Expectation","Variance","Skew")
+FS.momentos
+```
+
+# Calculo de Probabilidades  {.tabset .tabset-fade .tabset-pills}
+
+## Aproximacion Normal
+
+La idea consiste en suponer que la distribucion de $S$ puede aproximarse por una distribucion normal
+$$
+S \sim F_S(s) \approx N(s|\mu_S,\sigma_S^2),
+$$
+donde $\mu_S$ es `E.S` y $\sigma_S^2$ es `var.S`.
+
+En este caso, las probabilididades en la cola derecha de la distribucion se calculan en `R` para 
+$$\mathbb{P}(S > q),$$
+
+$$VaR(S,\alpha),$$
+
+y
+$$ES(S,\alpha),$$ 
+
+de la siguiente forma:
+
+```{r}
+tprob.S.norm <- pnorm(q, mean = E.S, sd = sqrt(var.S), lower.tail = FALSE)
+VaR.S.norm <- E.S + sqrt(var.S) * qnorm(alpha)
+ES.S.norm <- E.S + sqrt(var.S) * dnorm(qnorm(alpha)) / (1-alpha)
+FS.tail.norm <- as.data.frame(c(tprob.S.norm ,VaR.S.norm ,ES.S.norm ))
+colnames(FS.tail.norm) <- c("gaussian")
+rownames(FS.tail.norm) <- c("Probability","VaR","E.S.")
+FS.tail.norm
+```
+
+## Gamma trasladada
+
+La idea consiste en suponer que la distribucion de $S$ puede aproximarse por una distribucion gamma
+$$
+S \sim F_S(s) \approx Ga(s-k|\gamma_1,\gamma_2),
+$$
+donde $\gamma_1$ es el parametro `shape`, $\gamma_2$ es el parametro de escala `rate` y el parametro de traslacion es `k`. En `R`, estos parametros se obtienes como: 
+
+```{r}
+shape <- (2/skew.S)^2
+rate <- sqrt(shape/var.S)
+k <- E.S - shape/rate
+```
+
+Asi, las estimaciones para las probabilididades en la cola derecha de la distribucion se calculan en `R` para $\mathbb{P}(S > q)=P(G > q-k)$, $VaR(S,\alpha)$ y $ES(S,\alpha)$ como:
+
+```{r}
+tprob.S.tg <- pgamma(q-k, shape, rate, lower.tail = FALSE)
+VaR.S.tg <- k + qgamma(alpha, shape, rate)
+ES.S.tg <- k + ((shape/rate) / (1-alpha)) * 
+          pgamma(qgamma(alpha, shape, rate), 
+                 shape = shape + 1, rate = rate, lower.tail = FALSE)
+FS.tail.tg <- as.data.frame(c(tprob.S.tg ,VaR.S.tg ,ES.S.tg ))
+colnames(FS.tail.tg) <- c("gamma-t")
+rownames(FS.tail.tg) <- c("Probability","VaR","E.S.")
+FS.tail.tg
+```
+
+#  Recursion de Panjer   {.tabset .tabset-fade .tabset-pills}
+
+```{r}
+nsteps <- 50000 # k; should be > floor(q)
+stopifnot(nsteps + 1 >= floor(q))
+```
+
+## Discretizacion de la distribucion de seeveridades marginales
+
+Primero, mnecesitamos discretizar $F_X(x)$. Esto lo podemos realizar empleando el siguiente codigo en `R`.
+
+```{r}
+nsteps <- 50000
+stopifnot(nsteps + 1 >= floor(q))
+
+pts <- c(0, 1:(nsteps+1)- 0.5)
+f <- diff(plnorm(pts, meanlog = mu, sdlog = sigma))
+```
+
+Notemos que estamos discretizando  $\mathcal{X}$, i.e. $X$, en intervalos
+$$
+(0, 0.5], (1/2, 1.5], (1.5, 2.5], \ldots
+$$
+```{r}
+FX_d <- cbind(pts,f)
+plot(FX_d)
+```
+
+## Calculos recursivos
+
+Suponemos que las severidades individuales, $X_j$s con i.i.d. discretas con soporte en $\mathcal{X}=\{0,1,2,...\}$. Asi, las masas de probabilidad para esta version discretizada estan dadas por 
+$$
+f_k = P(X_1 = k),
+$$
+para $k$ en $\mathcal{X}$. Suponemos ademas que $N$ es discreta, con soporte en 
+$$
+\mathcal{N}=\{0,1,2,...\}
+$$
+con masas de probabilidad
+$$
+p_k = P(N = k),
+$$
+para $k$ en $\mathcal{N}$ tal que 
+$$
+p_k = (a+b/k) * p_{k-1}
+$$
+
+para $k >= 1$ con $a + b >= 0 $. 
+
+Se considera $p_0$ como un parametro dado.
+
+**NOTA:- La recursion de Panjer descansa en el supuesto que $N$ y $(X_j)_{j\geq 1}$ son mutuamente independientes.**
+
+Dados los supuestos anteriores, la distribucion para $S$ resulta ser discreta con masas de probabilidades condicionales,
+$$
+ps_{k,n} = P(S = k | N = n).
+$$
+
+De esta forma, la masa de probabilidad $ps_{k,n+1}$ para $\{S=k\}$, condicional en $N = n+1$, puede calcularse recursivamente como
+$$
+ps_{k,n+1} = \sum_{j=1}^{k-1} ps_{j,n} f_{k-j},
+$$
+para todo $k$ en el soporte discretizado $\mathcal{S}$.
+
+De esta forma, la recusion de Panker queda expresada como
+$$
+ps_k = P(S = k)
+$$
+para $k$ en el soporte $\mathcal{S}$, siendo
+$$
+M_N(z) = \mathbb{E}_{P_N}(z^N),
+$$
+la funcion generadora de momentos de $N$. 
+
+De esta forma, la recusion se define como
+
+\begin{equation}
+ps_0 = \begin{cases}
+      M_N(f_0), & \text{ si } \ \ a=0 \\
+      p_0/(1-f_0*a)^(1+b/a), & \text{ e.o.c.}
+      \end{cases}
+\end{equation}
+y 
+\begin{equation}
+ps_k = (1-f_0 * a) \sum_{j=1}^k (a+bj/k) * f_j * ps_{k-j},
+\end{equation}
+para $k=1,2,\ldots$. 
+
+En `R` esta recursion queda definida como:
+
+``` 
+s_0 <- if(a == 0) G(f_0) else p_0/(1-f_0*a)^(1+b/a)
+```
+y 
+```
+s_k <- (1-f_0*a) * sum_{j=1}^k (a+bj/k) * f_j * s_{k-j},
+```
+para $k = 1,2,\ldots$. 
+
+## Caso Poisson
+
+Particularmente, cuando 
+$$
+N \sim Po(\lambda),
+$$
+se tiene que 
+$$
+M_N(z) = exp\{\lambda *  (z-1)\},
+$$
+con $a = 0$ y $b = \lambda$. 
+
+De esta forma, tenemos el siguiente calculo directo:
+```{r}
+a <- 0
+b <- lambda
+ps <- numeric(nsteps+1)
+ps[1] <- exp(lambda * (f[1] - 1))
+fct <- 1 - f[1] * a
+for(k in 1:nsteps){
+  j <- 1:k
+  ps[k+1] <- fct * sum((a + b*j/k) * f[j+1] * ps[k-j+1])
+}
+plot(ps)
+```
+
+**NOTA:-** El objeto `ps` en `R` contiene las masas de probabilidad para $S$. 
+
+Con base en estas masas de probabilidad, calculamos las caracteristicas de interes:
+
+* probabilidad sobre la cola derecha de la distribucion $F_S(s)$
+
+* $VaR(S,\alpha)$
+
+* $ES(S,\alpha)$.
+
+> Usualmente, con `nsteps = 25000` los estimadores anteriores seran bien aproximados.
+
+```{r}
+Ps.df <- cumsum(ps)
+tprob.S.pr <- 1 - Ps.df[floor(q)]
+# Indices para los cuales S.df >= alpha
+ii <- which(Ps.df >= alpha)
+stopifnot(length(ii) > 0)
+VaR.S.pr <- min(ii)
+ES.S.pr <- sum((ii-1) * ps[ii]) / (1-alpha)
+FS.tail.pr <- as.data.frame(c(tprob.S.pr ,VaR.S.pr ,ES.S.pr ))
+colnames(FS.tail.pr) <- c("Panjer")
+rownames(FS.tail.pr) <- c("Probability","VaR","E.S.")
+FS.tail.pr
+```
+
+# Resumen  {.tabset .tabset-fade .tabset-pills}
+
+En el siguiente objeto en `R` resumimos y comparamos las aproximaciones a la cola derecha de la distribuicion del monto agregado de siniestros $F_S(s)$.
+
+Notemos que las aproximaciones de la distribucion normal son mas bajas que las de la distribucion aproximada por la distribiucion normal/gaussiana.
+
+```{r}
+FS.tail <- cbind(FS.tail.norm,FS.tail.tg,FS.tail.pr)
+FS.tail
+```
+
+En este caso, queda evidenciado que la aproximacion gaussiana no es adecuada, por hacer uso solo del primero y segundo momento de $F_S(s)$ (por consiguiente, no toma encuenta las caracteristicas asociadas con la forma en el extremo derecho de su distribucion, como lo hacen la segunda y tercera aproximacion).
+
+# Tarea  {.tabset .tabset-fade .tabset-pills}
+
+1. En la recursion de Panjer, comparen la probabilidad de que $S = k$ dado $N = n + 1$ con la probabilidad de alcanzar $j$ con $n$ sumandos y $k-j$ para el sumando restante.
+
+2. Calculen las aproximaciones a la cola derecha de $F_S(s)$ que produjeron con el metodo de simulacion estocastica y comparenlo con lo que se obtienen en este ejercicio.
+
+3. Relicen los mismos calculos reemplazando la distribucion $F_X(x)$ log-normal por cualquier otra distribucion para severidades individuales con soporte en $(0,\infty)$.
