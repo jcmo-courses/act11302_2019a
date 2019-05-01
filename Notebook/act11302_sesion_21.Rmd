@@ -1,0 +1,362 @@
+---
+title: "Sesion 21: Diversificación de riesgos vía modelos jerárquicos"
+author: "Juan Carlos Martínez-Ovando"
+date: "Primavera 2019"
+output: beamer_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+1. Motivación
+-------------------
+
+Hemos platicado reiteradamente en el curso acerca de la dos propiedades asociadas con los modelos actuariales: 
+
+* `homogeneidad`,
+
+* `no ambigüedad`.
+
+Estas propiedades son de suma relevancia para el calculo de probabilidades y para el proceso inferencial asociado.
+
+Sin embargo, aunque estas dos propiedades son deseables y proveen simplificaciones estructurales en los modelos que resultan adecuados, *modelos de probabilidad basados en estas dos propiedades pueden ser sobrepasados por aspectos estilizados de los datos en problemas reales.*
+
+-------------------
+
+Circunstancias donde los *datos puedan segmentarse de manera natural (intrínseca conocida)* son un ejemplo donde estas dos propiedades se ven limitadas.
+
+Tal segmentación puede obedecer a:
+
+a) Patrones geográficos
+
+b) Aspectos socioeconómicos
+
+c) Aspectos temporales
+
+d) Relaciones de asociación/conectividad/interacción
+
+e) etc.
+
+---
+
+Con el *propósito de proveer un esquema de modelación que cubra aspectos conceptuales intrínsecos como lo anterior*, se han propuesto **modelos de probabilidad segmentados**:
+
+* **Modelos estructurales** (en estadística frecuentista y econometría clásica)
+
+* **Modelos jerárquicos** (en el contexto bayesiano)
+
+* **Modelos de grafos dirigidos estructurales** (en el contexto de ingeniería en computación y sistemas cognitivos)
+
+---
+
+La **idea fundamental** detrás de estos modelos es la combinar y balancear dos aspectos de modelación:
+
+i) Preservar `no ambigüedad` y `homogeneidad` al interior de los segmentos
+
+ii) Distinguir elementos de `heterogeneidad` entre segmentos.
+
+Con esto se garantiza una medición conciliada del desconocimiento del *mismo problema/fenómeno*, aunque de manera diferenciada entre segmentaciones.
+
+Con base en esto, definimos la siguiente especificación del modelo.
+
+2. Especificación
+-------------------
+
+Consideremos el caso donde $Y$ mide eventos binarios con $\mathcal{X}=\{0,1\}$, *pensemos en la incidencia individual de siniestros de un portafolio de seguos*.
+
+Siendo $Y$ la variable de interés, consideremos a su vez que podemos indizar *observaciones* y *variables aleatorias* en dos dimensiones $ki$, donde
+
+* $k=1,\ldots,K$ hace referencia a la etiqueta de $K$ *segmentos intrínsecos* del problema, e 
+
+* $j=1,\ldots,J_k$ hace referencia a la etiqueta de las *unidades de medición* dentro de cada segmento. En el contexto de seguros, $J_k$ representa la suscripcion en el segmento $k$.
+
+---
+
+El **aspecto común** entre los segmentos reside en imponer un **aspecto estructural común** entendido como la forma de medir de la incertidumbre (a.k.a. forma estructural del modelo de probabilidad); en este caso mediante el modelo Bernoulli.
+
+--- 
+
+El **aspecto direfenciador entre segmentos** reside en distinguir que el aspecto que completa la especificación de los modelos al interior de los segmentos (a.k.a. parámetros) son distintos entre sí.
+
+De esta forma, en el contexto descrito, resulta:
+\begin{equation}
+Y_{kj}|\theta_{k} \sim Ber(y|\theta_{k}),\nonumber
+\end{equation}
+con 
+$$
+\mathbb{P}(Y_{kj}=1|\theta_{k})=\theta_{k},
+$$
+para $j=1,\ldots,J_k$ y $k=1.\ldots,K$, donde
+$$
+0<\theta_k<1.
+$$
+
+---
+
+Dos implicaciones derivadas de la especificación anterior se siguen:
+
+I) **Dentro de los segmentos**, los componentes del bloque $\boldsymbol{Y}_k=\left(Y_{kj}\right)_{j=1}^{J_K}$ son condicionalmente `i.i.d.` dado $\theta_k$,
+con 
+$$
+\mathbb{P}\left(Y_{k1}\in A_{1},\ldots,Y_{kJ_{k}}\in A_{J_{k}}\right)
+=
+\prod_{j=1}^{J_{k}} Ber\left(A_{j}|\theta_k\right),
+$$
+siendo los conjuntos $\left(A_j\right)_{j=1}^{J_k}$ cualquier subconjunto de $\mathcal{X}=\{0,1\}$.
+
+Para $k=1,\ldots,K$.
+
+---
+
+II) **Entre segmentos**, los bloques 
+$$
+\boldsymbol{Y}_k,\ldots,\boldsymbol{Y}_K,
+$$ 
+son `ind` condicionalmente en 
+$$
+\theta_{1},\ldots,\theta_{K},
+$$ (el bloque completo de parámetros). 
+
+---
+
+Es decir, combinando (I) y (II) tenemos,
+$$
+\mathbb{P}\left(\boldsymbol{Y}_k,\ldots,\boldsymbol{Y}_K|\theta_{1},\ldots,\theta_{K}\right)
+ =
+  \prod_{k=1}^{K} \prod_{j=1}^{J_k} Ber\left(Y_{kj}|\theta_k\right).
+$$
+
+Los parametros del modelo, en este caso, son 
+$$
+\theta_{1},\ldots,\theta_{K},
+$$
+en lugar de un solo $\theta$ como en el *modelo completamente homogeneo.*
+
+
+2.1. Simetría estocastica
+---
+
+La dualidad referida en (I) y (II) da origen a la noción de **intercambiabilidad parcial**, en la que 
+
+$$
+\mathbb{P}\left(Y_{kj}\in A_{kj}:k=1,\ldots,K;j=1,\ldots,J_k\right) = 
+$$
+$$
+=
+  \int_{\Gamma}\int_{(0,1)^{K}}\prod_{k=1}^{K}\left(\prod_{j=1}^{J_k} Ber(Y_{kj}\in A_{kj}|\theta_{k})\right) Q(d\theta_1,\ldots,d\theta_K|\gamma)\Pi(d\gamma),
+$$
+donde 
+
+* $Q(d\theta_1,\ldots,\theta_k|\gamma)$ denota la incertidumbre entorno a las características particulares de los segmentos,
+
+* $\gamma \in \Gamma$ representa el conocimiento experto característico común entre los segmentos,
+
+* $\Pi(d\gamma)$ cuantifica el **conocimiento suplementario** común a todos los segmentos (i.e. conocimiento suplementario sobre el fenómeno común).
+
+---
+
+En particular, en el contexto que nos compete,
+
+$$Q(d\theta_1,\ldots,d\theta_K|\gamma)=\prod_{k=1}^{K}Be(\theta_k|\alpha,\beta),$$
+siendo 
+$$
+\gamma=(\alpha,\beta),
+$$
+con
+$$
+\Gamma=(0,\infty)^{2},
+$$ el espacio parametral.
+
+---
+
+Adicionalmente, la informacion/conocimiento acerca de $(\alpha,\beta)$ se cuantifica con una distribucion de probabilidad con,
+$$
+\Pi(\alpha,\beta) = \Pi(\alpha) \times \Pi(\beta),
+$$
+la cual es referida como **prior** o **distribución inicial**. 
+
+Esta distribucion tiene soporte en $\mathbb{R}_{+}^{2}$.
+
+2.2. Comentarios
+---
+
+* Los parámetros $\theta_{1},\ldots,\theta_K$ se convierten en parámetros/variables latentes, por tener una distribución intrínseca dada por $Q(\cdot|\gamma)$.
+
+* Aunque diferenciado, la **versión marginal/reducida** del modelo para cada segmento es la misma, i.e. para todo $k=1,\ldots,K$ tenemos el mismo modelo,
+
+$$
+\mathbb{P}\left(Y_{k1}\in A_1,\ldots,Y_{kn}\in A_{n}\right)
+=
+\mathbb{P}\left(Y_{k'1}\in A_1,\ldots,Y_{k'n}\in A_n\right),
+$$
+
+para todo $k\neq k'$, y para todo $n$.
+
+---
+
+* **Sin embargo**, es posible ver que condicional en $\gamma$ el modelo es diferente estre segmentos, i.e.
+
+$$
+\mathbb{P}\left(Y_{k1}\in A_1,\ldots,Y_{kn}\in A_n\right|\gamma)
+\neq
+\mathbb{P}\left(Y_{k'1}\in A_1,\ldots,Y_{k'n}\in A_n\right|\gamma),
+$$
+para todo $k\neq k'$ y para todo $n$.
+
+* *Así, el modelo permite dar una visión diferenciada de la incertidumbre entre segmentos, condicional en $(\alpha,\beta)$.*
+
+3. Inferencia
+---
+
+La inferencia en esta clase de modelos con base en un conjunto de **datos** 
+$$
+(y_{kj})_{i=1,\ldots,J_k},
+$$
+para $k=1,\ldots,K$, se basa en estimar o hacer inferencia sobre los **parámetros**
+$$
+\gamma=(\alpha,\beta),
+$$
+y las **variables latentes** 
+$$
+\boldsymbol{\theta}=(\theta_1,\ldots,\theta_K).
+$$
+
+---
+
+
+Los `datos`, en este caso son típicamente leidos en `R` o `Python` como un `data.frame` donde una columna representa las etiquetas de los $J$ segmentos y otra columna representa las mediciones $y_{ji}$s.
+
+Revisen la estructura de los datos en la tabla `AllState`.
+
+3.1. Verosimilitud integrada
+---
+
+La estimación se basa en la **verosimilitud integrada** que se define de manera simple como,
+$$
+l\left(\gamma,\boldsymbol{\theta}|\boldsymbol{y}\right)
+=
+\prod_{k=1}^{K}\prod_{j=1}^{J_k}Ber(y_{kj}|\theta_k).
+$$
+
+* Noten que ésta no depende del parámetro $\gamma$ explícitamente, sino implícitamente a través de las $\theta_j$s.
+
+3.2. Aprendizaje
+---
+
+El aprendizaje, bajo la perspectiva bayesiana, consiste en actualizar el conocimiento acerca de $\gamma$ y $\boldsymbol{\theta}$, empleando el teorema de Bayes, como
+\begin{equation}
+q(\gamma,\boldsymbol{\theta}|\boldsymbol{y}) 
+\propto
+l\left(\gamma,\boldsymbol{\theta}|\boldsymbol{y}\right)
+Be(\theta_1|\gamma)\cdots Be(\theta_J|\gamma) 
+\cdot\pi(\gamma),
+\end{equation}
+con $\gamma=(\alpha,\beta)$.
+
+* La constante de normalización, en este caso, no puede obtenerse de manera analítica cerrada; requiriendo el uso de algoritmos numéricos. --Lo mismo sucede en el enfoque frecuentista de inferencia--.
+
+3.3. Algoritmo numérico
+---
+
+Bajo el enfoque bayesiano de inferencia, la actualización $q(\gamma,\boldsymbol{\theta}|\boldsymbol{y})$ se puede obtener empleando el algoritmo *Gibbs sampler*, en el que iterativamente se obtienen valores 
+$$
+\left\{\gamma^{(m)},\boldsymbol{\theta}^{(m)}\right\}_{m=1}^{M},
+$$
+para un $M$ grande fijo.
+
+Los datos que el algoritmo genera presumiblemente representan una *muestra estocástica* de $$
+q(\gamma,\boldsymbol{\theta}|\boldsymbol{y}).
+$$
+
+---
+
+La contraparte frecuentista de este algoritmo es el algoritmo E-M (*expectation*, para las variables latentes, y *maximization*, para los parámetros).
+
+3.4. Gibbs sampler
+---
+
+p.0) Definimos valores iniciales (arbitrarios) para $\boldsymbol{\theta}$ y $\gamma$, i.e.
+$$
+\boldsymbol{\theta}^{(0)} \in (0,1)^{J}, 
+$$
+y 
+$$
+\gamma^{(0)} \in (0,\infty)^{2}, 
+$$
+recordemos que $\gamma=(\alpha,\beta)$ son los parametros de la distriucion `Beta` para las $\theta_k$s.
+
+p.1) Iterativamente, para $m\geq 1$ se siimulan los **parametros** y **variables latentes** como,
+
+$\gamma^{(m)}$ con base en $\boldsymbol{y}$ y $\boldsymbol{\theta}^{(m-1)}$ mediante
+$$
+\gamma|\boldsymbol{y},\boldsymbol{\theta}^{(m-1)}
+\sim
+\pi(\gamma|\boldsymbol{y},\boldsymbol{\theta}^{(m-1)})
+\propto
+\prod_{k=1}^{K}Be\left(\theta_k^{(m-1)}|\gamma\right)\pi(\gamma),
+$$
+
+* Nota:- En este caso,no se cumple homogeneidad, por lo que usamos un subalgoritmo **slice sampler**
+
+---
+
+Con base en $\boldsymbol{y}$ y $\gamma^{(m)}$ se genera $\boldsymbol{\theta}^{(m)}$ pediante el siguiente cíclo para $k=1,\ldots,K$,
+$$
+\theta_{k}^{(m)}|\boldsymbol{\theta}_{<k}^{(m)},\boldsymbol{\theta}_{>k}^{(m-1)},\gamma^{(m)},\boldsymbol{y}
+\sim
+q(\theta_k|\boldsymbol{y},\gamma^{(m)}),
+$$
+donde 
+$$
+q(\theta_k|\boldsymbol{y},\gamma^{(m)})
+\propto
+\prod_{j=1}^{J_k}Ber\left(y_{kj}|\theta_k\right)Be\left(\theta_k|\gamma^{(m)}\right).
+$$
+
+* En este caso, $q(\theta_j|\boldsymbol{y},\gamma^{(m)})$ es conocida de manera analítica cerrada por ser $Ber\left(y_{ji}|\theta_j\right)$ y $Be\left(\theta_j|\gamma^{(m)}\right)$ una **pareja conjugada**.
+
+
+---
+
+El orden de las subiteraciones para **parametros** y **variables latentes** es indistinto, el algoitmo garantiza convergencia en este todo caso.
+
+---
+
+Con base en los `datos simulados` 
+$$
+\left\{\gamma^{(m)},\boldsymbol{\theta}^{(m)}\right\}_{m=1}^{M},
+$$
+podemos generar `inferencia` y, sobre todo, `prediccion` con base en aproximaciones de Monte Carlo, i.e.
+$$
+\mathbb{E}_{\mathbb{P}} \left\{\phi(Y,\boldsymbol{\theta},\gamma)\right\} \approx \frac{1}{M}\sum_{m=1} \phi\left( Y^{(m)},\boldsymbol{\theta}^{(m)},\gamma^{(m)} \right),
+$$
+siendo $\left\{Y^{(m)}\right\}$ `datos simulados` complementariamente, en caso de ser requerido.
+
+
+4. Comentarios
+---
+
+* El proceso de diversificacion que acabamos de describir permite diversificar la exposicion al riesgo en subconjuntos de un portafolio de seguros.
+
+* La diversificacion brinda la posibilidad de tener una lectura depurada del riesgo, por lo que la `prevision de riesgos` es mas confiable.
+
+* La diversificacion de riesgos que comentamos es extendible a los `montos de siniestros`, no solo a la `incidencia de siniestros`.
+
+* Esta diversificacion esta en funcion de un conjunto de **variables intrinsecas conocidas**. Este procedimiento se conoce como `aprendizaje supervisado`. Existira la posibilidad de diversificar el riesgo con **caracteristicas no observables,** en cuyo caso estaremos trabajando con `aprendizaje no supervizado`.
+
+
+5. Ejercicios
+---
+
+1. Revisen el código en `R` que implementa el *Gibbs sampler*
+
+2. Experimenten cambiando datos o especificaciones del código
+
+3. Contextualicen un modelo jerárquico semejante para **montos individuales** o **frecuencias agregadas en el contexto de riesgo colectivo**.
+
+
+Lecturas suplementarias
+---
+
+* Porrini, *Risk Classification Efficiency and the Insurance Market Regulation*. `act11302_sesion_21_suplemento.pdf`

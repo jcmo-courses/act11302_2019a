@@ -1,0 +1,342 @@
+---
+title: "Sesion 23 - Laboratorio"
+author:
+-  Juan Carlos Martinez-Ovando
+-  Departamento Academico de Actuaria
+date: "Primavera 2019"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: yes
+    self_contained: yes
+    theme: united
+    highlight: textmate
+fig_align: "center"
+fig_width: 18
+---
+
+# Modelo de severidades individuales {.tabset .tabset-fade .tabset-pills}
+
+Consideremos, como en ocasiones previas, los datos de `AllState`:
+
+```{r}
+data <- read.csv("./Datos/d4a_allstateclaim_data.csv")
+head(data)
+colnames(data)
+```
+
+Recordemos, los datos corresponden a reclamos por polizas de un seguro de autos de la empresa _AllState_. Se supone que cada poliza es contratada por un hogar. Los montos de reclamos para las diferentes polizas pueden diferenciarse por anio de suscripcion, modelo del vehiculo y fabricante.
+
+## Diccionario
+
+- `Household_ID` INT - Identificador numerico de la poliza (una por hogar).
+
+- `Vehicle` INT - Identificador del vehiculo asegurado por poliza (dentro de cada hogar).
+
+- `Calendar_Year` INT - Anio calendario en el que el vehiculo fue asegurado.
+
+- `Model_Year` INT - Anio calendario de fabricacion/venta del vehiculo. 
+
+- `Blind_Make` INT - Fabricante del vehiculo (discresional).
+
+- `Claim_Amount` INT - Monto de reclamo asociado con el vehiculo (montos en USD).
+
+**Nota:-** Las polizas con reclamos nulos (`Claim_Amount`==0) corresponden a casos no siniestrados.
+
+## Datos de severidades individuales
+
+Los datos que son de interes para nosotros, en este laboratorio, son los de `severidades individuales` condicionales en la `ocurrencia de siniestros`.
+
+Estos datos corresponden a los casos donde `Claim_Amount`>0). Para esto, filtramos los datos para recuperar las severidades individuales.
+
+```{r}
+indices <- which(data$Claim_Amount > 0)
+severidades <- data[indices,]
+dim(severidades)
+table(severidades$Calendar_Year)
+```
+
+Conservamos todas las variables, porque realizaremos un ejercicio de diversificacion mas adelante. En particular, referente a el *anio calendario* (`Calendar_Year`) y al fabricante del vehiculo (`Blind_Make`).
+
+```{r}
+table(severidades[,c("Calendar_Year","Blind_Make")])
+```
+
+De momento, en este laboratorio, solo consideraremos los datos `Claim_Amount`.
+
+**Nota:-** Recordemos que los datos de `montos/severidades individuales` son reportados en la misma base monetaria, por lo que estos son comparables entre los casos `2005`, `2006` y `2007`.
+
+Observemos la comparacion de los datos entre anios:
+
+```{r}
+if(!require("ggplot2")){install.packages("ggplot2")}
+library("ggplot2")
+
+severidades$Calendar_Year <- as.factor(severidades$Calendar_Year)
+
+ggplot(severidades[,c("Calendar_Year","Claim_Amount")], aes(x=Claim_Amount,group=Calendar_Year,fill=Calendar_Year))+
+  geom_histogram(position="dodge",binwidth=0.25)+theme_bw()
+```
+
+Podemos focalizar tal comparacion, eliminando los datos `Claim_Amount`<1000:
+
+```{r}
+ggplot(severidades[which(severidades$Claim_Amount<1000),c("Calendar_Year","Claim_Amount")], aes(x=Claim_Amount,group=Calendar_Year,fill=Calendar_Year))+
+  geom_histogram(position="dodge",binwidth=0.25)+theme_bw()
+```
+
+*Grosso modo*, los datos comparten el mismo comportamiento:
+
+**2005**
+
+```{r}
+summary(severidades[which(severidades$Calendar_Year=="2005"),"Claim_Amount"])
+```
+
+**2006**
+
+```{r}
+summary(severidades[which(severidades$Calendar_Year=="2006"),"Claim_Amount"])
+```
+
+**2007**
+
+```{r}
+summary(severidades[which(severidades$Calendar_Year=="2007"),"Claim_Amount"])
+```
+
+Observamos un patron marginalmente diferenciado de los datos de `2005` y `2006` respecto a `2007` en terminos de los siguientes aspectos de su distribucion asociada:
+
+* **Sesgo**
+
+* **Peso de la cola derecha**
+
+Examinaremos estos aspectos con detalle mas adelante. Por lo pronto, consideremos los siguientes escenarios de `entrenamiento` y `prueba`.
+
+## Escenarios de aprendizaje
+
+Consideraremos los siguientes dos escenarios de aprendizaje:
+
+> **Aprendizaje I:-** Datos de `entrenamiento` para `2005` y de `prueba` para `2006`. 
+
+> **Aprendizaje II:-** Datos de `entrenamiento` para `2005,2006` y de `prueba` para `2007`. 
+
+# Modelos
+
+Recordemos, en este laboratorio solo estamos prestando atencion al estudio de la `distribucion de severidades individuales`. De esta forma, y de manera consistente con las distribuciones de la `session 22` de nuestro curso, porponemos los siguientes modelos:
+
+1. Funcion de distribucion empirica (EDF, por sus siglas en ingles)
+
+Obtendremos la estimacion de la EDF empleando la libreria `EnvStats`. Recuerden, que el calculo es relativamente sencillo de obtener sin emplear esta libreria.
+
+2. Distribucion Pareto
+
+La estimacion por `maxima verosimilitud` y `minimos cuadrados` de la distribucion Pareto se obtiene en `R` empleando la libreria `EnvStats`.
+
+3. Distribucion Lognormal
+
+La estimacion de parametros via `maxima verosimilitud` de la distribucion lognormal la obtendremos empleando la libreria `MASS`. Recuerden que la estimacion directa es relativamente sencilla, tambien.
+
+4. Distribucion gamma generalizada
+
+La estimacion por `maxima verosimilitud` de los tres parametros de la distribucion gamma generalizada puede obtnerse empleando la libreria `VGAM`.
+
+5. Distribucion beta generalizada del segundo tipo
+
+La estimacion de los parametros de la distribucion beta generalizada del segundo tipo la obtendremos via `maxima varosimilitud` empleando la libreria `GB2`.
+
+6. Distribucion Pareto generalizada
+
+La estimacion de los parametros de la distribucion Pareto generalizada empleando `maxima verosimilitud` puede obtenerse empleando la libreria `evir`. Esta libreria incluye otros metodos de estimacion, de manera alternativa, pero no los consideraremos en este laboratorio. 
+
+```{r include=FALSE}
+if(!require("EnvStats")){install.packages("EnvStats")}
+if(!require("VGAM")){install.packages("VGAM")}
+if(!require("MASS")){install.packages("MASS")}
+if(!require("GB2")){install.packages("GB2")}
+if(!require("evir")){install.packages("evir")}
+```
+
+```
+if(!require("EnvStats")){install.packages("EnvStats")}
+if(!require("VGAM")){install.packages("VGAM")}
+if(!require("MASS")){install.packages("MASS")}
+if(!require("GB2")){install.packages("GB2")}
+if(!require("evir")){install.packages("evir")}
+```
+
+# Aprendizaje I
+
+En el `Aprendizaje I` consideramos los datos de `2005` como `datos de entrenamiento` y los de `2006` como `datos de prueba`.
+
+```{r}
+severidades.train <- severidades[which(severidades$Calendar_Year=="2005"),"Claim_Amount"]
+severidades.test <- severidades[which(severidades$Calendar_Year=="2006"),"Claim_Amount"]
+hist(severidades.train,50)
+```
+
+## Funcion de distribucion empirica
+
+La estimacion de la $edf$ se obtiene con la siguiente instruccion:
+```{r}
+library("EnvStats")
+p <- qemp(p = seq(0, 1, len = 100), severidades.train) 
+f.edf <- demp(p, severidades.train) 
+```
+
+La visualizacion de la $edf$ en los datos se obtiene como:
+```{r}
+epdfPlot(severidades.train, 
+         xlim = c(0, 65), 
+         epdf.col = "cyan", 
+         xlab = "X", 
+         main = "EDF")
+epdfPlot(severidades.train, 
+         xlim = c(0, 2000), 
+         epdf.col = "cyan", 
+         xlab = "X", 
+         main = "EDF")
+```
+
+## Distribucion Pareto
+
+## Distribucion Lognormal
+
+La estimacion de la distirbucion log-normal se obtiene de la siguiente forma:
+```{r}
+library("MASS")
+par.lognorm <- fitdistr(severidades.train,"lognormal")
+par.lognorm
+```
+
+La densidad de la distribucion estimada es:
+```{r}
+severidades.train.unique <- sort(unique(severidades.train))
+d.lognorm <- dlnorm(severidades.train.unique, 
+                    par.lognorm$estimate['meanlog'], 
+                    par.lognorm$estimate['sdlog'])
+
+plot(severidades.train.unique, d.lognorm, type="l", 
+     ylab="Densidad",
+     xlab="X", 
+     xlim=c(0,65))
+title(main = "Densidad lognormal")
+
+plot(severidades.train.unique, d.lognorm, type="l", 
+     ylab="Densidad",
+     xlab="X", 
+     xlim=c(0,2000))
+title(main = "Densidad lognormal")
+```
+
+## Distribucion gamma generalizada
+
+## Distribucion beta generalizada del segundo tipo
+
+La estimacion de los parametros de la distribucion beta generalizada del segundo tipo se obtene de la siguiente forma:
+```{r}
+library("GB2")
+par.gb2 <- mlfit.gb2(severidades.train)
+par.gb2
+```
+
+## Distribucion Pareto generalizada
+
+# Comparacion de modelos
+
+En esta secion implementaremos el procedimiento de `comparacion` y `seleccion` del modelo para *severidades individuales*. Realizaremos la ilustracion con tres enfoques:
+
+a. Bondad de ajuste
+
+b. Cociente de verosimilitud
+
+c. Cociente de veroimilitud extendida
+
+## Bondad de ajuste
+
+Este enfoque basicamente consiste en contrastar los **cinco modelos parametricos** en terminos de sus `cercania/semejanza` con la **EDF**.
+
+Los criterios difieren, escencialmente, en la `metrica` empleada para calcular la `cercania/semejanza` entre distribuciones.
+
+Definimos, de manera general, a $F_{edf}(X)$ como la funcion de distirbucion empirica y $F_j(x|\hat{\theta}_j)$ como la distirbucion parametrica estimada (puntualmente) del tipo de modelo $j$.
+
+### Kolmogorov-Smirnov
+
+El estadistico para medir la `cercania/semejanza` entre distribuciones $edf$ y $j$ bajo Kolmogorov-Smirnov (KS) es
+$$
+T_{KS}(j)=\max_{x}|F_{edf}(x)-F_j(x|\hat{\theta}_j)|,
+$$
+para $j=1,\ldots,J$.
+
+**Nota.** La $edf$ es discreta, por lo que el calculo de $T_{KS}(j)$ debe realizarse en dos puntos para cada valor de $x$:
+
+* $F_{edf}(x-)$ que es el limite por la izquierda antes de $x$
+
+* $F_{edf}(x)$ que es el limite por la derecha antes de $x$.
+
+Los valores criticos tradicionalmente empleados para esta estadistica son:
+
+1. $T_\alpha=\frac{1.22}{\sqrt{n}}$ para $\alpha=0.10$ nivel de significacia,
+
+2. $T_\alpha=\frac{1.36}{\sqrt{n}}$ para $\alpha=0.05$ nivel de significacia,
+
+3. $T_\alpha=\frac{1.63}{\sqrt{n}}$ para $\alpha=0.01$ nivel de significacia,
+
+donde $n$ es el tamnio de la muestra.
+
+### Anderson-Darling
+
+En la opcion anderson-Darling (AD), la metrica para medir la `cercania/semejanza` entre distribuciones $edf$ y $j$ es definida como
+$$
+T_{AD}(j)=-nF_j(x^*_U|\hat{\theta}_j)
++n\sum_{u=1}^{U-1} [1-F_{edf}(x^*_u)]^2 \left\{\text{log}[1-F_j(x^*_u|\hat{\theta}_j)]-\text{log}[1-F_j(x^*_{u+1}|\hat{\theta}_j)]\right\}
++ n \sum_{u=2}^{U} F_{edf}(x_u^*)^2 \left[\text{log}F_j(x^*_{u+1}|\hat{\theta}_j)-\text{log}F_j(x^*_u|\hat{\theta}_j)\right],
+$$
+donde $\{x_u^*\}_{u=1}^{U}$ corresponden a los $U$ datos unicos disponibles.
+
+**Nota:** En este calculo, se hace explicito la consideracion de comparacion entre `limites por la derecha` y `limites por la izquierda` relacionados con $F_{edf}(\cdot)$.
+
+Los valores critios, para esta prueba, son tipicamente:
+
+1. $T_a=1.933$ para $a=0.10$,
+
+2. $T_a=2.492$ para $a=0.05$,
+
+3. $T_a=3.857$ para $a=0.01$.
+
+## Verosimilitud
+
+El cociente de verosimilitudes, consiste basicamente en calcular la `verosimilitud del modelo especifico` para los datos. Esta verosimilitud se calcula en dos pasos. 
+
+1. Calcula el `estimador puntual` (via `maxima verosimilitud`) de `\theta_j`, para `j=1,\ldots,J`, con base en los datos $\{x_1,\ldots,x_n\}$. 
+
+Recuerden, de los datos extraemos los datos unicos $\{x_1^*,\ldots,x_U^*\}$ (las frecuencias de los datos unicos no son requeridas en este contexto).
+
+2. Con el `estimador puntual del modelo especifico`, $F_{j}(x|\hat{\theta}_j)$, recuperamos su correspondiente densidad y calculamos la `verosimilitud del modelo` $j$ de la siguiente forma:
+$$
+lik(j)=\prod_{u=1}^{U}f_j(x_u^*|\hat{\theta}_{j}),
+$$
+para $j=1,\ldots,J$.
+
+Por cuestiones numericas, es conveniente trabajar con la `log-verosimilitud`,
+$$
+loglik(j)=\sum_{u=1}^{U} \text{log}f_j(x_u^*|\hat{\theta}_{j}).
+$$
+
+**Noten** que la verosimilitud del modelo se calcula sobre un segmento de los mismos datos con los que se estimo el modelo, `datos de entrenamiento`.
+
+## Verosimilitud predictiva
+
+Una variante del `procedimiento basado en verosimilitud` para evaluar la capacidad predictiva del modelo consiste en realizar la siguiente modificacion:
+$$
+ploglik(j)=\sum_{u=1}^{U} \text{log}f_j(x_u^t|\hat{\theta}_{j}),
+$$
+donde $\{x_u^t\}_{u=1}^{U}$ corresponden a los $U$ valores unicos de los `datos de prueba/test`. 
+
+**Noten** que la evaluacion de las densidades en los datos de prueba brinda una cuantificacion de que tanta masa de probabilidad el modelo predictivo asigna a los valores que realmente ocurrieron (pero que no fueron empleados en el proceso de estimacion).
+
+# Ejercicios
+
+* Realizar el procedimiento de `Aprendizaje II`

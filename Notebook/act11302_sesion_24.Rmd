@@ -1,0 +1,326 @@
+---
+title: "Sesion 24 - Modificacion de Distribuciones para Severidades Individuales"
+author:
+-  Juan Carlos Martinez-Ovando
+-  Departamento Academico de Actuaria
+date: "Primavera 2019"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: yes
+    self_contained: yes
+    theme: united
+    highlight: textmate
+fig_align: "center"
+fig_width: 18
+---
+
+# Preliminares
+
+## Motivacion
+
+Hemos estudiado en varias ocasiones modificaciones de distribuciones para severidades individuales basadas en:
+
+* Transformaciones de variables
+
+* Modificaciones via mezclas
+
+* Modificaciones via alteraciones de probabilidades (transformacion de Esscher, por ejemplo).
+
+Todas estas transformaciones tienen el proposito de *flexibilizar* la forma distriucional de las **severidades individuales**.
+
+## Objetivo
+
+En esta sesion, estudiaremos las modificaciones inducidas por las `condiciones de polizas`.
+
+# Modificaciones
+
+Recordemos un poco la notacion que hemos adoptado en este curso:
+
+* $X_j$ denota el monto de siniestro individual de la poliza $j$ en un portafolio de seguros.
+
+* Para la poliza $j$, y monto de siniestro $X_j$, el monto de reclamo de siniestro $j$ es denotado por $Y_j$.
+
+El **monto de reclamo** esta definido en terminos de las condiciones del contrato de seguro/poliza.
+
+> Todas las modificaciones que consideraremos aqui haran referencia a **montos individuales de siniestros**, $X_j$, condicionalmente a la ocurrencia de siniestro, i.e. $X_j>0$.
+
+## Deducibles
+
+En el caso de **deducible** se fija un umbral, denotado por $d$, de tal forma que en caso de siniestro $X_j$, el reclamo procede si $X_j$ excede al umbral $d$.
+
+Asi, bajo deducible, la **modificacion** $Y^d_j$ es definida como
+$$
+Y^d_j = \max\{X_j-d,0\} := \left(X_j-d\right)_{+},
+$$
+donde $\left(X_j-d\right)_{+}$ denota la parte positiva de $(X_j-d)$, i.e.
+$$
+\left(X_j-d\right)_{+} =
+\begin{cases}
+0, & X_j \leq d, \\
+X_j-d, & X_j > d.
+\end{cases}
+$$
+> Recordemos que este resultado es condicional a $X_j>0$ (i.e. ocurrencia de siniestro).
+
+### Mexcla de variables
+
+La distribucion **modificada por deducible** es un ejemplo de `distribuciones tipo mezcla`, i.e.:
+
+* Tiene una masa de probabilidad en $0$ para el caso donde $X_j \leq d$.
+
+* Tiene una parte continua con soporte en $(0,\infty)$ para el caso donde $X_j>d$.
+
+De esta forma, la distribucion de probabilidad para $Y^d_j$ es
+$$
+F_{Y^d_j}(y)=\alpha \delta_{\{0\}}(y) + F^c_{Y^d_j}(y)\mathbb{I}(y>0),
+$$
+donde $F^c_{Y^d_j}(y)$ es la distribucion continua para el reclamo, con
+$$
+F^c_{Y^d_j}(y) = F_{X_j}(y+d),
+$$
+siendo $F_{X_j}(\cdot)$ la **distribucion de severidades individuales** de $X_j$, condicional en $X_j>0$.
+
+### Funcion de supervivencia
+
+La funcion de supervivencia de $F_{Y^d_j}(y)$, denotada por $S_{Y^d_j}(y)$, es definida como
+$$
+S_{Y^d_j}(y)=S_{X_j}(y+d).
+$$
+
+### Esperanza
+
+El valor esperado de $F_{Y^d_j}(y)$ se calcula como
+$$
+\mathbb{E}_{F_{Y^d_j}}\left(Y^d_j\right)=\int_0^\infty F_{Y^d_j}(\text{d}y)=\text{d}
+$$
+
+### Ejemplo
+
+Consideremos que $X_j\sim \text{Exp}(x|\theta)$, con $\mathbb{E}(x|\theta)=1/\theta$, y $\theta>0$.
+
+Consideramos un **deducible** con umbral $d>0$ fijo.
+
+La **distribucion base** del monto individual de siniestros tiene densidad:
+$$
+f_{X_j}(x|\theta)=\theta \exp\{-\theta x\}\mathbb{I}(x>0).
+$$
+La **modificaicon por deducible** es inducida por
+$$
+Y^d_j=(X_j-d)_{+}.
+$$
+
+1. En este caso, la probabilidad de que $Y^d_j$ sea igual a cero, corresponde al caso en que $X_j\leq d$, i.e.
+$$
+\alpha = \mathbb{P}(X_j\leq d)=1-\exp\{-\theta d\}.
+$$
+
+2. La funcion de densidad para el caso en que $X_j > d$ es
+$$
+f^c_{Y^d_j}(y|\theta) = f_X(y+d|\theta) = \theta\exp\{-\theta(y+d)\}\mathbb{I}(y>0).
+$$
+
+De esta forma, la **funcion de densidad** para $Y^d_j$ es de la forma
+\begin{eqnarray}
+f_{Y^d_j}(y|\theta) & = &\alpha \delta_{\{0\}}(y) + (1-\alpha) f^c_{Y^d_j}(y|\theta)\\
+&= &\alpha \delta_{\{0\}}(y) + (1-\alpha) \frac{\theta e^{-\theta(y+d)}}{S_{X_j}(d|\theta)}\mathbb{I}(y>0).
+\end{eqnarray}
+
+
+### Comentarios
+
+* El componente $f^c_{Y^d_j}(y|\theta)$ se le conoce como la **distribucion de la variable de perdida en exceso**, y se define como la siguiente `densidad condicional`
+$$
+f^c_{Y^d_j}(y|\theta) = \frac{f^c_{X_j}(y+d|\theta)}{S_{X_j}(d|\theta)}.
+$$
+
+* La modificacion inducida por el `deducible de franquicia` considera que se paga `todo el monto de siniestro` $X_j$ cuando $X_j>0$.
+
+## Cociente de eliminacion de perdida 
+
+Podemos definir una modificacion inducida por 
+$$
+(X_j\wedge d)=\min\{X_j,d\}=
+\begin{cases}
+X_j, & X_j < d,\\
+d, & X_j \geq d.
+\end{cases}
+$$
+En este caso, es relativamente sencillo de ver que se cumple la siguiente identidad:
+$$
+X_j = \left(X_j-d\right)_{+} + \left(X_j\wedge d\right).
+$$
+A partir de esta identidad, se define el **cociente de eliminacion de perdida** (LER, por sus siglas en ingles) como,
+$$
+\text{LEM}_j=\frac{\mathbb{E}(X_j\wedge d)}{\mathbb{E}(X_j)}.
+$$
+Para variables que sob absolutamente continuas, tenemos:
+$$
+\text{LEM}_j:=\frac{\int_{0}^{d}[1-F_{X_j}(x)]\text{d}x}{\int_{0}^{\infty}[1-F_{X_j}(x)]\text{d}x}.
+$$
+
+### Ejemplo
+
+Supongamos que $X_j\sim \text{Exp}(x|\theta)$ parametrizada como en el ejemplo anterior, con $1/\theta=1M$. 
+
+Supongamos que se define un **deducible ordinario** en $d=0.5M$.
+
+Calculemos el $\text{LER}_j$ bajo $d$:
+
+$$
+\begin{eqnarray}
+\text{LER}_j  & := & \frac{\int_{0}^{d}[1-F_{X_j}(x)]\text{d}x}{\int_{0}^{\infty}[1-F_{X_j}(x)]\text{d}x} \\
+& = & \frac{\int_{0}^{500}e^{-\frac{x}{1,000}}\text{d}x}{\int_{0}^{\infty}e^{-\frac{x}{1,000}}\text{d}x} \\
+& = & 1-e^{-0.5} \\
+& = & 0.3934693.
+\end{eqnarray}
+$$
+
+## Coaseguro
+
+En el caso de coaseguro, de orden $0<c<1$, la transformacion correspondiente para la modificacion inducida por $Y^c_j$, definida como
+$$
+Y^c_j = cX_j,
+$$
+corresponde a la distribucion del cambio de variable correspondiente. 
+
+El monto del siniestro $X_j$ a cargo del `asegurado` es
+$$
+Y^{1-c}_j = (1-c)X_j.
+$$
+
+La `distribucion` para $Y^c_j$ tiene asociada una `densidad` dada por,
+$$
+f_{Y^c_j}(y)=\frac{1}{c}f_{X_j}\left(\frac{y}{c}\right)\mathbb{I}(y>0).
+$$
+De manera correspondiente, la `funcion de distribucion de probabilidades` es
+$$
+F_{Y^c_j}(y)=F_{X_j}\left(\frac{y}{c}\right)\mathbb{I}(y>0).
+$$
+
+### Ejemplo
+
+Supongamos que $X_j\sim \text{Exp}(x|\theta)$ con `media` $1/\theta=1000$. Consideremos un `coaseguro` en el orden de `c=0.8`.
+
+Calculamos ahora la distribucion para $Y^c_j$, como
+$$
+\begin{eqnarray}
+f_{Y^c_j}(y|\theta)
+& = & \frac{1}{0.8}\theta\exp\left\{-\theta\left(\frac{x}{0.8}\right)\right\}\mathbb{I}(x>0)\\
+& = &
+\frac{0.001}{0.8}\exp\left\{-\left(\frac{0.001}{0.8}\right)x\right\}\mathbb{I}(x>0)\\
+& = & (0.00125)\exp\left\{-(0.00125)x\right\}\mathbb{I}(x>0).
+\end{eqnarray}
+$$
+
+En este caso, el `monto esperado de reclamo`, para $Y^c_j$, es
+$$
+\mathbb{E}\left(Y^c_j\right) = \frac{1}{0.00125}=800 < 1000 = \mathbb{E}\left(X_j\right).
+$$
+
+## Limites de cobertura
+
+En este caso, podemos considerar que para la poliza $j$ en caso de siniestro con monto individual $X_j$, el reclamo a la aseguradora no puede exceder un **limite de cobertura** $M>0$. En este caso, la modificacion inducida por el limite de cobertura $M$ es definida como,
+$$
+Y^M_j = X_j \wedge M = 
+\begin{cases}
+X_j, & X_j < M \\
+M, & X_j \geq M.
+\end{cases}
+$$
+
+De manera semejante al caso de `deducible ordinario`, la distribucion asociada con $Y^M_j$ es de tipo mixta, con un componente discreto y otro continuo:
+
+* El componente continuo corresponde al caso donde $X_j\leq M$, en cuyo caso la distribucion tiene asociada la densidad,
+$$
+f^c_{Y^M_j}(y)=\frac{f_{X_j}(y)}{F_{X_j}(M)}\mathbb{I}(y<M).
+$$
+
+* El componente discreto corresponde a una masa de probabilidad en $M$, que es de la forma
+$$
+\alpha \delta_{\{M\}}(y),
+$$
+donde $\alpha=\mathbb{P}(X_j\geq M)$.
+
+
+De esta forma, la `distribucion modificada` para $Y^M_j$ es inducida por
+$$
+f_{Y^M_j}(y)=(1-\alpha) f^c_{Y^M_j}(y) + \alpha \delta_{\{M\}}(y).
+$$
+### Ejemplo
+
+Supongamos que $X_j\sim \text{Pa}(x|\theta,\gamma)$ con 
+
+* $\theta=1M$ parametro de localizacion, y 
+
+* $\gamma=2$ parametro de forma.
+
+Suponagmos que el `contrato de seguro` contempla un limite de cobertura $M=2M$. 
+
+Calculemos la `densidad` y la funcion de `distribucion de probabilidades` para `Y^M_{j}`.
+
+Recordemos que la densidad para $X_j$ es de la forma:
+$$
+f_{X_j}(x|\theta,\gamma)=\frac{\gamma \theta^\gamma}{(x+\theta)^{\gamma + 1}}\mathbb{I}(x>\theta).
+$$
+Es decir,
+$$
+f_{X_j}(x|\theta,\gamma) = \frac{2(1000)^2}{(1000+x)^{3}}\mathbb{I}(x > 1000),
+$$
+y la funcion de `distribucion de probabilidades` es de la forma
+$$
+F_{X_j}(x|\theta,\gamma) = \left[ 1-\left(-\frac{\theta}{\theta+x}\right)^{\gamma} \right]\mathbb{I}(x>1000).
+$$
+
+El parametro $\alpha$ de la `modificacion` de $Y^M_j$ es
+$$
+\alpha = \mathbb{P}(X_j \geq M) = \left(\frac{1}{3}\right)^2=\frac{1}{9}.
+$$
+De esta forma, la `densidad de probabilidades` para $Y^M_j$ es de la forma
+$$
+f_{Y^M_j}(y|\theta,\gamma)=\left(\frac{8}{9}\right)\frac{2(1000)^2}{(8/9)(1000+y)^3}\mathbb{I}(y<M) + \alpha \delta_{\{1000\}}(y).
+$$
+
+# Comentarios
+
+* Las tres `modificaciones por coberturas` que hemos revisado en esta sesion pueden combinarse en un solo producto.
+
+* Recordemos, que el objetivo en este caso es el de obtener una cuantificacion del `riesgo/incertidumbre` individual, 
+$$
+F_{Y^d_j}(y), \ F_{Y^c_j}(y), \ F_{Y^M_j}(y),
+$$
+o una combinacion de ellas, para 
+$$
+j=1,\ldots,J.
+$$
+
+* A partir de esta `lectura individual`, obtendremos una `lectura agregada` para 
+$$
+\begin{eqnarray}
+S^d & = & \sum_{j} Y^d_j, \\
+S^c & = & \sum_{j} Y^c_j, \\
+S^M & = & \sum_{j} Y^M_j, \\
+\end{eqnarray}
+$$
+o una version combinada de coberturas.
+
+* Las modificaciones tendran efectos tanto en la lectura acerca de la incertidumbre de los `montos agregados de reclamos`
+$$
+F_{S^d}(s), \ F_{S^c}(s), \ F_{S^M}(s),
+$$
+o las combinaciones de coberturas consideradas, como en las `primas de riesgo agregadas` resultantes,
+$$
+\Pi_{S^d}, \ \Pi_{S^c}, \ \Pi_{S^M}.
+$$
+
+## Siguiente sesion
+
+En la siguientes sesiones estudiaremos los `efectos agregados` de la adopcion de diferentes coberturas.
+
+* En particular, estudiaremos el efecto de la adopcion de `deducibles ordinarios`.
+
+# Lecturas complementarias
+
+* Klugman, et al. *Loss Models: From Data to Decisions.* Seccion 4.4 y Capitulo 5.
