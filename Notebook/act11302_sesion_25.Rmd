@@ -1,0 +1,186 @@
+---
+title: "Sesion 25 - Efecto de Decucibles Ordinarios"
+author:
+-  Juan Carlos Martinez-Ovando
+-  Departamento Academico de Actuaria
+date: "Primavera 2019"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: yes
+    self_contained: yes
+    theme: united
+    highlight: textmate
+fig_align: "center"
+fig_width: 18
+---
+
+# Preliminar
+
+Como vimos en las sesiones anteriores, podemos definir `modificaciones` a la distribucion del `monto individual de siniestro`, las cuales tendran dos impactos:
+
+1. Sobre la distribucion del `monto agregado de reclamos`
+
+2. Sobre la `prima de riesgo` asociada.
+
+> En esta sesion estudiaremos el caso (1), en el que la aplicacion de un `deducible ordinario` tiene un efecto sobre la distribucion del `monto agregado de reclamos` (no del `monto agregado de siniestros`, hay que notar), a traves de la distribucion de la `frecuencia de siniestros`.
+
+Es claro, que bajo la consideracion anterior, estaremos trabajando bajo el `enfoque de riesgo colectivo`.
+
+# Deducible ordinario en riesgo colectivo
+
+> La relacion es inversa, a mayor `deducible ordinario` menor numero de `reclamos` a cargo de la aseguradora.
+
+Lo que necesitamos hacer es estudiar/cuantificar el monto de tal efecto, que intuitivamente es razonable.
+
+## Notacion
+
+Supongamos que:
+
+* $X_j$ denota el `monto de siniestro individual` (en este caso, estaremos considerando el caso en que $X_j>0$, por adoptar el `enmfoque de riesgo colectivo`).
+
+* $S=\sum_{j=1}^N X_j$ denota el `monto agregado de siniestro`
+
+* $N$ representa la `frecuencia de siniestros` en el periodo de operacion.
+
+* El `deducible ordinario` lo denotamos por $d>0$
+
+* **Definimos** $0<\phi<1$ como la probabilidad de que en un siniestro se realice un pago, i.e.
+$$
+\phi = \mathbb{P}(X_j>d)
+$$
+
+* Definimos la `variable indicadora de reclamo` como $\iota_j$, con 
+$$
+\iota_j=
+\begin{cases}
+0, & X_j < d \\
+1, & X_j \geq d.\\
+\end{cases}
+$$
+
+
+De esta forma, $$\phi=\mathbb{P}(\iota_j= 1)$$. Es decir,
+$$
+\iota_j | X_j \sim \text{Ber}(\iota|\phi).
+$$
+Recordemos que la funcion generadora de probabilidades para $\iota_j|X_j$ es
+$$
+P_{\iota_j}(z)=\phi z + (1-\phi).
+$$
+
+## Agregacion
+
+De esta forma, el `monto agregado de reclamos` quedaria expresado como:
+$$
+S^d \sum_{j=1}^{N^d} Y^d_j \mathbb{I}(\iota_j=1),
+$$
+donde $N^d$ representa la `frecuencia de reclamos`.
+
+Como hemos visto antes, la `frecuencia de reclamos` la podemos reexpresar como
+$$
+N^d=\sum_{j=1}^{N} \iota_j,
+$$
+donde implicitamente $\iota_j$ es condicional en $X_j$ para todo $j=1,\ldots,N$.
+
+## Supestos
+
+Adoptando los supuestos:
+
+1. $X_j$ son `iid` $F_{X_j}(x)=F_{X}(x)$ data.
+
+2. $(X_j)_{j\geq 1}$ y $N$ son `separadas`,
+
+tenemos que 
+
+3. $\iota_j$ son `iid` $\text{Ber}(\iota|\phi)$, con
+$$
+\phi=\mathbb{P}(X_j\geq d)=\int_{d}^{\infty} F_X(\text{d}x).
+$$
+
+## Distribucion de la `frecuencia de reclamos`
+
+Derivado de las definiciones y supuestos anteriores, vemos que $N^d$ (la `frecuencia de reclamos`) es una variable aleatoria compuesta, cuya distribucion es compuesta con
+
+* `Distribucion primaria` dada por $F_N(n)$ (la `distirbucion de siniestros`)
+
+* `Distribucion secundaria` dada por $\text{Ber}(\iota|\phi)$.
+
+Recordemos:
+$$
+N^d=\sum_{j=1}^N \iota_j.
+$$
+
+> La `distribucion de reclamos` dependera de la `distribucion de frecuencias de siniestros`.
+
+El calculo de esta distribucion puede obtenerse de manera analitica empleando la identidad de la `distribucion generadora de probabilidades` para $N^d$, que se obtiene como
+$$
+\begin{eqnarray}
+P_{N^d}(z) 
+  & = & 
+  \sum_{n=0}^{\infty} z^n \mathbb{P}(N^d=n) \\
+  & = &
+  \sum_{n=0}^{\infty} \sum_{k=0}^{\infty} z^n \mathbb{P}(N^d=n|N=k)\mathbb{P}(N=k) \\
+  & = &
+  \sum_{k=0}^{\infty} \mathbb{P}(N=k) \left(\sum_{k=0}^{\infty} z^n \mathbb{P}(N^d=n|N=k)\right) \\
+  & = &
+  \sum_{k=0}^{\infty} \mathbb{P}(N=k) \left(\sum_{k=0}^{\infty} z^n \mathbb{P}\left(\sum_{j=1}^{N}\iota_j=n|N=k\right)\right) \\
+  & = &
+  \sum_{k=0}^{\infty} \mathbb{P}(N^d=k) \left(P_{\iota}(z)\right)^k \\
+  & = &
+  P_{N}\left(P_{\iota}(z)\right) \\ 
+  & = &
+  P_{N}\left(\phi z + (1-\phi) \right) \\  
+  & = &
+  P_{N}\left(1+ \phi (z -1) \right). \\  
+\end{eqnarray}
+$$
+
+> La distribucion asociada con $P_{N^d}(z)$ para la `frecuencia de reclamos` es la `Binomial compuesta.` Dependiendo de los valores especificos de $(p_n)_{n\geq 0}$ para la `frecuencia de siniestros`, existira una forma analitica cerrada para $F_{N^d}(n)$ o no.
+ 
+## Ejemplo
+
+Supongamos que:
+
+* las `severidades individuales` $X_j$ son `iid` con $X_j \sim \text{Exp}(x|\theta)$ con $\mathbb{E}(X|\theta)=1/\theta = 100$.
+
+* el `deducible ordinario` tiene unmbral en $d=20$
+
+* la `frecuencia de siniestros` es $\text{Po}(n|\lambda)$ con $\lambda = 3$, i.e. $N\sim \text{Po}(n|3)$.
+
+De lo anterior calculamos
+$$
+\phi = \int_{20}^{\infty} \frac{1}{100}\exp\left\{-\frac{x}{100}\right\} \text{d}x.
+$$
+De esta forma, la funcion generadora de probabilidades para $\iota$ es
+$$
+P_{\iota}(z)=1-\phi(z-1).
+$$
+
+Por otro lado, la funcion genreradora de probabilidades para $N$ es
+$$
+P_N(z)=\exp\left\{3(\lambda-1)\right\}.
+$$
+
+Aplicando $P_{\iota}()$ y $P_{N}()$ a la identidad que revisamos anteriormente, tenemos que la `funcion generadora de probabilidades` para $N^d$ es
+$$
+\begin{eqnarray}
+P_{N^d}(z) 
+  & = &
+  \exp\left\{3(\phi (z -1) )\right\}\\
+  & = & 
+  = \exp\left\{ (3\phi) (z -1) \right\}.
+\end{eqnarray}
+$$
+
+> Es decir, la distribucion `binomial-compuesta` tiene una expresion analitica cerrada dada por $$N^d \sim \text{Po}(n|\lambda^d),$$ donde $$\lambda^d=\lambda \phi,$$ corresponde a la tasa de intensidad de la `frecuencia de reclamos` inducida por el `deducible` $d>0$.
+
+# Comentatrios
+
+> Los resultados que hemos estudiado en esta sesion aplican analogamente para `deducibles ordinarios` como `deducibles franquicia`.
+
+# Lecturas complementarias
+
+* Klugman, et al. *Loss Models: From Data to Decisions.* Seccion 4.4 y Capitulo 5.

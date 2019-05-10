@@ -1,0 +1,303 @@
+---
+title: "Sesion 26 - Efecto de Modificaciones sobre Montos Agregados de Perdidas"
+author:
+-  Juan Carlos Martinez-Ovando
+-  Departamento Academico de Actuaria
+date: "Primavera 2019"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: yes
+    self_contained: yes
+    theme: united
+    highlight: textmate
+fig_align: "center"
+fig_width: 18
+---
+
+\usepackage{mathtools}
+\DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}
+
+# Preliminar
+
+Como vimos en las sesiones anteriores, podemos definir `modificaciones` a la distribucion del `monto individual de siniestro`, las cuales tendran dos impactos:
+
+1. Sobre la distribucion del `monto agregado de reclamos`
+
+2. Sobre la `prima de riesgo` asociada.
+
+> En esta sesion estudiaremos el caso (2), en el que la aplicacion de una `modificacion` tiene un efecto sobre la distribucion del `monto agregado de peridas` (a.k.a. `reclamos`).
+
+# Notacion
+
+* $X_j$ denota el `monto individual del siniestro` $j$
+
+* $N$ denota el numero total de siniestros / `frecuencia de siniestros` (casos donde $X_j > 0$)
+
+* $Y^m_j$ denota el `monto individual de reclamo` asociado por la `modificacion` $m$, bajo $X_j > 0$.
+
+* $N^m$ denota el numero total de pagos / `frecuencia de reclamos pagados`.
+
+De lo anterior se sigue que 
+$$
+\mathbb{P}(Y^m_j > 0 |X_j > 0) > 0,
+$$
+con 
+$$
+\mathbb{P}(Y^m_j = 0 |X_j > 0) > 0,
+$$
+dependiendo del `tipo de modificacion` $m$ que consideremos.
+
+
+## Distribuciones
+
+De lo anterior, sera de interes calcular el `impacto/efecto` de la `modificacion` $m$ en:
+
+I. `Prima de riesgo agregada`, $\Pi_S^m$
+
+II. `Distribucion del riesgo agregada`, $F_{S^m}(s)$.
+
+Ambas `caracteristcas/cantidades` son tipicamente dificiles de calcular. 
+
+> En esta sesion cubriremos una ilustracion no trivial del caso.
+
+# Ilustracion
+
+En esta ilustracion consideraremos el `efecto` de la `modificacion` $m$ definida como la combinacion de:
+
+1. `Deducible ordinario`
+
+2. `Coaseguro`
+
+3. `Limite de cobertura`.
+
+Empezamos con el efecto sobre la `prima de riesgo base` y `concepcion de riesgo` (I).
+
+Seguiremos con el estudio del efecto sobre la distribucion de probabilidad (II).
+
+## Prima base
+
+Un portafolio de seguros es modelado con los siguientes componentes:
+
+* Los `montos individuales de severidades` es descrito con la distribucion Pareto con $\alpha = 4$, parametro de forma, y $\theta = 10$, parametro de escala/localizacion, i.e.
+$$
+X_j \sim \text{Pa}(x|\alpha,\theta).
+$$
+
+* la `frecuencia de siniestros`, $N$, es descrita con la distribucion Poisson con  tasa de intensidad $\lambda = 3$, i.e.
+$$
+N\sim \text{Po}(n|\lambda).
+$$
+
+* Se considera un `deducible ordinario` con $d=6$
+
+* Limite de cobertura, $M=18$ unidades.
+
+* Coaseguro del $c=0.75$.
+
+> Se desea calcular la `prima de riesgo base` y la `varianza` del `monto agregado de siniestros/perdidas/reclamos` y del `monto agregado de pagos`.
+
+> Bajo los supuestos adicionales de `homogeneidad` e `independencia estocastica` entre las severidades individuales, tenemos los siguientes resultados.
+
+De acuerdo a la especificacion anteriormente, para el `monto agregado de reclamos`,
+$$
+S^m = \sum_{j=1}^NY^m_j,
+$$
+tenemos los siguientes resultados.
+
+Respecto a la `frecuencia de siniestros`,
+$$
+\mathbb{E}_{\text{Po}(|\lambda)}(N)=\lambda=3.
+$$
+
+Por otro lado, para los `montos individuales`, en dos partes de las `modicionaciones`, tenemos
+$$
+\begin{eqnarray}
+\mathbb{E}_{\text{Pa}(|\alpha,\theta)}\left(X_j\wedge (M+d)\right) 
+  & = & \frac{\theta}{\alpha-1}\left[1-\left(\frac{\theta}{M+d+\theta}\right)^{\alpha -1}\right] \\
+  & \approx & 3.25,\\
+\mathbb{E}_{\text{Pa}(|\alpha,\theta)}\left(X_j\wedge d\right) 
+  & = & \frac{\theta}{\alpha-1}\left[1-\left(\frac{\theta}{d+\theta}\right)^{\alpha -1}\right] \\
+  & \approx & 2.52.\\
+\end{eqnarray}
+$$
+
+De esta manera, considerando el `coaseguro` $c$ despues de aplicar las `tres modificaciones`, tenemos
+$$
+\begin{eqnarray}
+\mathbb{E}(Y^m_j) 
+    & = & c\left[\mathbb{E}_{\text{Pa}(|\alpha,\theta)}\left(X_j\wedge (M+d)\right)-\mathbb{E}_{\text{Pa}(|\alpha,\theta)}\left(X_j\wedge d\right) \right] \\  
+    & = & 0.75\left[\mathbb{E}_{\text{Pa}(|\alpha,\theta)}\left(X_j\wedge 24\right)-\mathbb{E}_{\text{Pa}(|\alpha,\theta)}\left(X_j\wedge 6\right) \right] \\
+    & \approx & 0.55.
+\end{eqnarray}
+$$
+De esta forma, la `prima base agregadas` es
+$$
+\begin{eqnarray}
+\Pi_S 
+    & = & \mathbb{E}(S) \\
+    & = & \mathbb{E}_{\text{Po}(|\lambda)}(N) \times \mathbb{E}(Y^m_j) \\
+    & \approx & 1.65.
+\end{eqnarray}
+$$
+
+Por otro lado, necesitamos calcular $var(Y^m_l)$, dada por
+$$
+\begin{eqnarray}
+var(Y^m_j) 
+    & = & c^2 \left[ \mathbb{E}_{\text{Pa}(|\alpha,\theta)}\left( (X_j\wedge (M+d))^2\right) - \mathbb{E}_{\text{Pa}(|\alpha,\theta)}\left( (X_j\wedge d)^2\right) 
+    - 2d \mathbb{E}_{\text{Pa}(|\alpha,\theta)}\left( (X_j\wedge (M+d))\right) 
+    + 2d \mathbb{E}_{\text{Pa}(|\alpha,\theta)}\left( (X_j\wedge d)\right) \right] \\
+    & \approx & 3.99.
+\end{eqnarray}
+$$
+
+> Verifiquen estos calculos, como ejercicio, por favor.
+
+De lo anterior, se sigue que
+$$
+\begin{eqnarray}
+var(S) 
+    & = & \mathbb{E}(N)var(Y^m_j) + \mathbb{E}(Y^m_j)^2 var(N) \\
+    & \approx & 11.95.
+\end{eqnarray}
+$$
+
+> Comparen con la `prima de riesgo base` y `varianza` del `monto agregado de siniestros` in modificacion.
+
+## Distribucion de pagos
+
+> Continuando con el ejemplo anterior, consideremos ahora que deseamos calcular la `distribucion de probabilidades` de $S^m$, i.e. $$\mathbb{P}(S^m\leq s) = F_{S^m}(s).$$
+
+Para esto, necesitamos calcular las distribuciones de $N^m$ y $Y^m_j$, inducidas por las modificciones:
+
+El primer componente, la `probabilidad individual` de un siniestro `X_j` resulte en `pago/reclamo`, es
+$$
+\begin{eqnarray}
+\phi 
+  & = & \mathbb{P}(Y^m_j>0) \\
+  & = & \mathbb{P}(X_j>d) \\
+  & = & S_{\text{Pa}(|\alpha,\theta)}(d) \\
+  & = & \left(\frac{\theta}{\theta + d}\right)^{\alpha + 1} \\
+  & \approx & 0.15.
+\end{eqnarray}
+$$
+
+### Frecuencia de reclamos
+
+De esta forma, la distribucion de $N^m$, siguiendo los resultados de la `sesion 25` es tal que
+$$
+\begin{eqnarray}
+\mathbb{E}(N^m) 
+  & = & \mathbb{E}_{\text{Po}(|\lambda)}(N) \mathbb{E}_{\text{Ber}(|\phi)}(\iota^m_j) \\
+  & = & \lambda \phi \\
+  & \approx & 0.46.
+\end{eqnarray}
+$$
+
+### Monto individual de reclamo
+
+Proseguimos con el calculo de la distrinicion para la `parte continua` de $Y^m_j$.
+
+1. Respeto al `deducible ordinario` solamente, tenemos
+$$
+\mathbb{P}(Y^d_j > y) = \frac{\mathbb{P}(X_j > y+d)}{\mathbb{P}(X_j > d)}.
+$$
+
+2. Aplicando el `coaseguro`, tenemos qye la distribucion para $$Y^{dc}_j=cY^d_j,$$ es
+$$
+\mathbb{P}(Y^{dc}_j > y) = \frac{\mathbb{P}(X_j > (y+d)/c}{\mathbb{P}(X_j > d/c)}.
+$$
+
+3. Aplicando el limite de cobertura $M=18$, tenemos que el `maximo pago posible` es
+$$
+Y^{dcM}_j = Y^m_j \leq c \left( (M+d) -d \right) = 13.5.
+$$
+Entonces, el soporte de $Y^m_j$ es 
+$$
+\mathcal{Y}^m = (0,13.5].
+$$
+
+De esta forma,
+$$
+F_{Y^m_j}(y)=
+\begin{cases}
+F^c_{Y^m_j}(y), & 0 < y < 13.5 \\
+1, & y \geq 13.5 \\
+\end{cases}
+$$
+Nos resta calcular $F^c_{Y^m_j}(y)$, que se obtiene como
+$$
+F^c_{Y^m_j}(y) = \frac{\mathbb{P}(X_j>d)-\mathbb{P}\left(X_j > d + y/c\right)}{\mathbb{P}(X_j>d)},
+$$
+la cual tiene una `forma analitica complicada`.
+
+### Monto agregado de reclamo
+
+Como podemos anticipar/verificar, el calculo analitico de 
+$$F_{S^m}(s),$$
+es oneroso computacional/analiticamente.
+
+Tipicamente, el calculo descansa en dos procedimientos:
+
+a. Recursion por discretizacion
+
+b. Simulacion estocastica
+
+> Revisemos el caso (a):
+
+Calculamos la discretizacion de $F_{Y^m_j}(y)\mathbb{I}(y\in \mathcal{Y}^m)$ en `bloques` de tamanio 
+$$
+K = 2.25.
+$$
+
+De esta forma, calculamos las `masas de probabilidad` asociadas con la discrtizacion:
+$$
+\begin{eqnarray}
+f_0 
+  & = & F_{Y^m}(K/2) - F_{Y^m}(0/2) \\
+  & = & 1-\frac{\mathbb{P}( X_j > 6 + 1.125/0.75 )}{\mathbb{P}( X_j > 6} \\
+  & \approx & 1/3,\\
+f_1
+  & = & F_{Y^m}(K(1+1/2) - F_{Y^m}(K/2)\\
+  & \approx & 0.33 \\
+  & \vdots & \\
+f_6 
+  & = &
+  F_{Y^m}(14.625) − F_{Y^m}(12.375)\\
+  & \approx & 0.059\\
+f_l
+  & = & 1,\\
+\end{eqnarray}
+$$
+para todo $l\geq 7$.
+
+Asi, ahor apodemos `aproximar` la distribucion de los `reclamos agregados` con la aproximacion a su `densidad de probabilidades` a traves de la `distirbucion Poisson compuesta discretizada`:
+$$
+\begin{eqnarray}
+f_{S^m}(s) 
+  & \approx &
+  f_{s/K} \\
+  & = & 
+  \frac{\mathbb{E}(N^m)}{n}
+  \sum_{l=1}^{n}f_n f_{n-l}
+\end{eqnarray}
+$$
+donde $f_{s/K}$ denota la `masa de probabilidad` en la `parte entera` de $s/K$, i.e. $n \floor (s/K)$. Por lo que la aproximacion anterior tiene soporte dicreto asociado con el `lattice`, como
+$$
+\{0,1,2,3,\ldots\} \longleftrightarrow \{0,K,2K,3K,\ldots\},
+$$
+con 
+$$
+\begin{eqnarray}
+f_S(0) 
+  & = & \exp\{\mathbb{E}(N^m)(1−f_0)\}\\
+  & = & \exp\{0.45776(1−0.30124)\}.
+\end{eqnarray}
+$$
+
+# Lecturas complementarias
+
+* Klugman, et al. *Loss Models: From Data to Decisions.* Seccion 4.4 y Capitulo 5.
