@@ -1,0 +1,280 @@
+---
+title: "Sesion 28 - Uso de Modelos Lineales Generalizados"
+author:
+-  Juan Carlos Martinez-Ovando
+-  Departamento Academico de Actuaria
+date: "Primavera 2019"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: yes
+    self_contained: yes
+    theme: cosmo #sandstone #lumen #cosmo #
+    highlight: textmate
+fig_align: "center"
+fig_width: 18
+---
+
+\usepackage{mathtools}
+\DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}
+
+# Preliminar
+
+* En esta sesion estudiaremos el uso de `modelos de regresion` (en particular, modelos de `regresion generalizada`) para la prevision de riesgos.
+
+* Las ilustraciones de esta sesion hacen uso de la libreria `R2OpenBUGS`.
+
+```
+if(!require("R2OpenBUGS")){install.packages("R2OpenBUGS")}
+suppressMessages(library("R2OpenBUGS"))
+```
+
+```{r include=FALSE}
+if(!require("R2OpenBUGS")){install.packages("R2OpenBUGS",dependencies = TRUE)}
+suppressMessages(library("R2OpenBUGS"))
+
+#if(!require("DPpackage")){install.packages("DPpackage")}
+#suppressMessages(library("DPpackage"))
+```
+
+# Motivacion
+
+* Hemos estudiado que para mitigar la incertidumbre sobre el `monto agregado de siniestros`, $S$, de un portafolio, es conveniente estudiar la incertidumbre acerca del `monto individual de siniestros`, $X_j$, bajo la representacion $$S=\sum_j X_j.$$
+
+* La incertidumbre acerca de $X_j$ es cuantificada por el modelo de probabilidad $$X_j \sim F_{X}(x_j|\theta),$$ para cierta funci\'on de distribuci\'on $F()$ y parametro $\theta$.
+
+> Este modelo es aplicado a todos los $X_j$s por igual bajo el supuesto `iid`.
+
+## Segmentacion
+
+* Hemos visto tambien que cuando se conocen `variables intrinsecas` adicionales, $Z_j$, las cuales identifican/asocian circunstancias particulares de riesgo para cada $X_j$, circunstancias enunciadas entre las siguientes alternativas excluyentes $$\mathcal{Z}=\{1,2,\ldots,K\}$$, entonces la incertidumbre acerca de $X_j$ puede definirse condicionamente a $Z_j=k$, como
+$$
+X_j|Z_j = k \sim F_{k}(x_j|\theta_k),
+$$
+para algun $k\in \mathcal{Z}$.
+
+> Es decir, definimos $K$, $\left(F_k(|\theta_k)\right)_{k=1}^K$ modelos para las $X_j$ y, dependiendo del valor $Z_j$, se aplica el modelo correspondiente a cada $X_j$.
+
+> Esta es una forma de diversificar el riesgo dentro de un portafolio.
+
+> Es tambien una forma de introducir dependencia adicional para diversificar el riesgo.
+
+## Diversificacion
+
+Con el proposito de *extender* la nocion de `diversificacion` anteriores, en ocasiones es conveniente definir el conjunto de `variables intrinsecas` como una coleccion de $p$ variables numericas, 
+$$
+Z_j = (Z_{j1},\ldots,Z_{jp}),
+$$
+de manera que, la dependencia de $X_j$ en terminos de las $(z_{j1},\ldots,z_{jp})$ se define en terminos de su `valor esperado`, i.e.,
+$$
+X_j|Z_j = (z_{j1},\ldots,z_{jp}) \sim F(x_j|z_{j1},\ldots,z_{jp}),
+$$
+tal que 
+$$
+\mathbb{E}(X_j|z_{j1},\ldots,z_{jp})=\alpha_0 + \alpha_1z_{j1} + \ldots + \alpha_p z_{jp}.
+$$
+
+> Esta es la `forma general` de expresar el modelo de regresion tradicional $$x_j = \alpha_0 + \alpha_1z_{j1} + \ldots + \alpha_p z_{jp} + \varepsilon_j.$$ 
+
+## Comentarios
+
+* El `modelo de regresion` presupone que $X_j$ toma valores en la recta real $\mathbb{R}$.
+
+* En el contexto actuarial, como en muchos otros contextos, la variable $X_j$ tiene soporte acotado. En nuestro caso particular, tipicamente $$X_j \in \mathcal{X}=\mathbb{R}_+=(0,\infty),$$ cuando $X_j$ representa el `monto individual de reclamos`, o $$X_j \in \mathcal{X}=\{0,1\},$$ cuando $X_j$ representa la `ocurrencia de siniestro`, o $$X_j \in \mathcal{X}=\mathbb{N}=\{0,1,2,\ldots\},$$ cuando $X_j$ representa la `frecuencia de siniestros (conteos)` de un portafolio de seguros.
+
+La circunstancia anterior require `generalizar el modelo de regresion`, dando pie a los `modelos de regresion generalizados`.
+
+# Modelos de regresion generalizados
+
+## Regresion Poisson
+
+En este caso, por notacion, remplazamos $X_j$ por $N_j$, como lo hicimos en las notas previas del curso.
+
+De esta forma, la especificacion de la distribucion para $N_j$, sin segmentacion, es de la forma
+$$
+N_j|Z_j=z_j \sim \text{Po}(n_j|\lambda_j),
+$$
+tal que 
+$$
+\begin{eqnarray}
+\mathbb{E}_{\text{Po}}(N_j|z_j) & = & \lambda_j \\
+& = & \lambda(z_j) \\
+& = & \exp\{\alpha_0+\alpha_1 z_{j1}+\ldots+\alpha_p z_{jp}\}.
+\end{eqnarray}
+$$
+Esta especificacion define la clase de `modelos de regresion Poisson`.
+
+### Ilustracion
+
+Consideremos el siguiente ejemplo de `conteos` de billetes falsificados en Mexico:
+
+```{r}
+library("R2OpenBUGS")
+datos <- read.csv("act11302_sesion_28_datos2.csv", header=TRUE)
+datos <- as.data.frame(datos)
+
+attach(datos)
+time <- Year
+y <- F20
+n <- length(y)
+
+detach(datos)
+data <- list("n"=n,"y"=y,"time"=time)
+head(data)
+plot(time,y)
+```
+
+El indice de observaciones, en este caso, corresponde al tiempo, i.e.
+$$
+j \in \{1,\ldots,12\}. 
+$$
+La variable que necesitamos definir en este contexto es la variable `dummy` o `indicadora` de que el tiempo sea posterior al anio `2003`, i.e.
+$$
+Z_j =\mathbb{I}(t_{j-1} \geq 2003).
+$$
+
+Es decir,
+$$
+Z_j =
+\begin{cases}
+0 & t_{j-1} < 2003,\\
+1 & t_{j-1} \geq 2003.\\
+\end{cases}
+$$
+
+Asi, el modelo queda especificado con
+$$
+\lambda_j = \exp\{\alpha_0 + \alpha_1 z_{j-1}\}.
+$$
+
+> A diferencia del modelo de regresion tradicional, en el `modelo de regresion poisson` la estimacion de los parametros $\alpha_0$ y $\alpha_1$ se obtienen de forma numerica (no analitica), tanto en el enfoque `frecuentista` como `bayesiano`.
+
+En nuestra ilustracion, empleamos el `enfoque bayesiano`. La estimacion/inferencia se realiza empleando el algoritmo _Gibbs sampler_, para lo cual es necesario definir valores iniciales:
+
+```{r}
+inits <- function(){list(c=sample(1:12,1), b=rep(0,2))}
+```
+
+Monitoreamos en este algoritmo los siguientes parametros
+```{r}
+parameters<-c("a","b","mu")
+```
+
+> Nota: La conciliacion de estos parametros (codigo) con nuestra descripcion (notacion) es la siguientes: $$\begin{eqnarray} \text{a} & \rightarrow & 2003\\  \text{b} & \rightarrow & (\alpha_0,\alpha_1) \\ \text{mu} & \rightarrow & (\lambda_j)\\ \end{eqnarray}$$
+
+El algoritmo numerico esta implementado en OpenBUGS, el codigo de especificacion del modelo es especificado en el archivo `act11302_sesion_28_Ex3-R`:
+
+```
+model{
+  #Likelihood
+  for (i in 1:n){
+    y[i]~dpois(mu[i])
+    log(mu[i])<-b[1]+b[2]*step(time[i]-a)
+  }
+  #Priors
+  a <- c+1999
+  c ~ dcat(p[])
+  for (j in 1:12){p[j]<-1/12}
+  for (j in 1:2){b[j]~dnorm(0,0.001)}
+}
+```
+
+Asi, el modelo se implementa con la siguiente instruccion:
+```{r}
+library("R2OpenBUGS")
+poissreg.sim <- bugs(data, inits, parameters,
+                     model.file="act11302_sesion_28_Ex3.R",
+                     n.iter=20000,
+                     n.chains=1,
+                     n.burnin=5000)
+```
+
+El resumen del proceso numerico de estimacion se obtiene de la siguiente forma:
+```{r}
+poissreg.out <- poissreg.sim$summary[,c(1,3,7)]
+print(poissreg.out)
+```
+
+La devianza (a.k.a. `deviance`) es una medida de ajuste del modelo, y se define _grosso modo_ como
+$$
+-2\log lik(\hat{\theta}|\text{datos}).
+$$
+
+#### Inferencia para $a$
+
+```{r}
+a.sim <- poissreg.sim$sims.list$a
+prop.table(table(a.sim))
+hist(a.sim)
+```
+
+Las tasas de intensidad del modelo se recuperan como:
+```{r}
+mu.sim <- poissreg.sim$summary[4:15,c(1,3,7)]
+print(mu.sim)
+dim(mu.sim)
+mu.sim <-as.matrix(mu.sim)
+mu.sim <-as.data.frame(mu.sim)
+colnames(mu.sim) <- c("mean", "liminf","limsup")
+plot(mu.sim$mean)
+lines(mu.sim$liminf)
+lines(mu.sim$limsup)
+```
+
+
+```{r}
+ymin <- min(mu.sim, y)
+ymax <- max(mu.sim, y)
+plot(time, y,
+     ylim=c(ymin,ymax),
+     type="b",
+     xlab="Tiempo",ylab="")
+lines(time,mu.sim[,1], col=2)
+lines(time,mu.sim[,2], lty=2,col=2)
+lines(time,mu.sim[,3], lty=2,col=2)
+abline(v=poissreg.out[1,1],col=4,lwd=2,lty=4)
+```
+
+## Comentarios
+
+* El modelo de regresion Poisson permite caracterizar modelos heterogenos de conteos asociados con covariables numericas de segmentacion.
+
+* La especificacion anterior es lo suficientemente flexible para ser modificada e introducir varias especificaciones de covariables de segmentacion.
+
+* El modelo de regresion Poisson es un caso particular de los `modelos lineales generalizados` (o `GLM` por sus siglas en ingles).
+
+# Formalizacion
+
+Los `GLM` estan especificados de manera que la variable de respuesta, $X_j$, tiene una distribucion asociada con la `familia exponencial de distribuciones`, i.e.
+$$
+f_{X}(x) = (2\pi /\tau) \exp\{-(\tau/2)(x-\mu)^2\},
+$$
+donde
+$$
+\begin{eqnarray}
+\phi & = & \tau ,\\
+b(x,\phi) & = &  (2\pi/\phi)^{-1/2}\exp\{(\phi/2)x^2\},\\
+\theta & = & \mu,\\ 
+a(\theta) & = & \theta^2/2.
+\end{eqnarray}
+$$
+
+Asi, entre esta clase de modelo, encontramos:
+
+* Modelo de regresion Poisson
+
+* Modelo de regresion binaria (`logit`)
+
+* Modelo de regresion gamma
+
+# Ejercicio
+
+1. Escriban el modelo de regresion Poisson que estudiamos en la forma de `GLM`.
+
+# Lecturas adicionales
+
+* Makov (2001) *Principal applications of Bayesian methods in actuarial science: a perspective.* North American Actuarial Journal, 5(4), 53–73.
+
+* Makov et al (1996) *Bayesian methods in actuarial science.* Journal of the Royal Statistical Society. Series D (The Statistician), 45(4), 503–515.
