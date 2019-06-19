@@ -1,0 +1,422 @@
+---
+title: 'Reporte Técnico: Danish Insurance'
+subtitle: 'Despacho Actuarial Moreno'
+author: "Victor Morales, Diego Zúñiga, Eduardo Arion"
+date: "ITAM - 01/Junio/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library("tidyr")
+library("dplyr")
+library("ggplot2")
+library("MASS")
+library("evir")
+library("stringr")
+library("stats")
+library("base")
+set.seed(31)
+b <- 0.485
+c <- 0.48
+p <- 0.48
+```
+
+# 1. Introducción 
+
+$\quad$ Este reporte se hace con el objetivo de analizar la base de datos de una aseguradora, a saber `Danish Insurance`, para diferentes coberturas y modelar tanto la frecuencia como la severidad agregada de siniestros. Utilizaremos una parte de la base de datos como información histórica para modelar frecuencia y severidad, los datos anuales para `1980-1988`;  compararemos las estimaciones hechas con los modelos que propongamos contra observaciones reales para los años `1989-1990` para ver qué tan bien se predicen nuevos datos. Ya que la información respecto a la suscripción anual de la cartera no está definida, la modelación de frecuencia se hace a través de la frecuencia de siniestros para cada cobertura. Con base en esto, la agregación para la severidad anual también se hará a través de la severidad anual para cada cobertura.  Ya con los modelos respectivos para frecuencia y severidad, nos ocuparemos con el cálculo de primas de riesgo. Por último se aplicará coaseguro, deducible y límite de severidad a los reclamos de la aseguradora y se calcularán las respectivas primas de riesgo con estas modificaciones. 
+
+# 2. Diccionario
+
+```{r completo, include=FALSE}
+## Datos
+completo <- read.csv('DanishInsurance_MultivarData_Full.csv')
+# Entrenamiento
+completo[contains('1980',vars=completo$date),'year'] <- '1980'
+completo[contains('1981',vars=completo$date),'year'] <- '1981'
+completo[contains('1982',vars=completo$date),'year'] <- '1982'
+completo[contains('1983',vars=completo$date),'year'] <- '1983'
+completo[contains('1984',vars=completo$date),'year'] <- '1984'
+completo[contains('1985',vars=completo$date),'year'] <- '1985'
+completo[contains('1986',vars=completo$date),'year'] <- '1986'
+completo[contains('1987',vars=completo$date),'year'] <- '1987'
+completo[contains('1988',vars=completo$date),'year'] <- '1988'
+entrenamiento <- completo %>% slice(which(completo$year<=1988))
+# Prueba
+completo[contains('1989',vars=completo$date),'year'] <- '1989'
+completo[contains('1990',vars=completo$date),'year'] <- '1990'
+prueba <- completo %>% slice(which(completo$year>1988))
+```
+
+$\quad$ La base de datos a utilizar es `DanishInsurance_MultivarData_Full` que contiene 2167 observaciones de las siguientes variables: 
+
+* `date`: fecha de ocurrencia del siniestro.
+
+* `building`: monto de reclamo para la cobertura de daños a edificio.
+
+* `contents`: monto de reclamo para la cobertura de daños a contenidos.
+
+* `profits`: monto de reclamo para la cobertura de pérdida en ventas.
+
+* `total`: monto de reclamo total de la póliza.
+
+$\quad$ Como se mencionó anteriormente, se divide la base en `entrenamiento` para los datos de `1980-1988` y `prueba` para los datos de `1989-1990`. Se asume que la base de datos está en unidades monetarias sin efecto de inflación, que la siniestralidad para cada póliza y cobertura son independientes e idénticamente distribuidas y que la frecuencia de siniestros también es independiente de la siniestralidad y anualmente.
+
+# 3. Modelos para frecuencia y severidad
+
+## 3.1 Modelo para frecuencia 
+
+$\quad$ Para la frecuencia de siniestros de cada cobertura se consideraron tres modelos: `Binomial`, `Binomial Negativa` y `Poisson`. El modelo `Binomial` se descartó pues tuvimos que simular un tamaño de cartera con un porcentaje de siniestralidad arbitrario, por lo que se sesgó un poco esta estimación. El modelo `Binomial Negatvia` también lo descartamos pues tuvimos que simular el tamaño de la cartera como en el `Binomial`. Por lo tanto el modelo que se utilizará para hacer las estimaciones para los datos `prueba` es `Poisson`: contamos el número de reclamos anuales por cobertura y el promedio de éstos será nuestra tasa de siniestralidad anual $\lambda_{k}$ para $k \in${`building`, `contents`, `profits`}. Para cada cobertura la tasas de siniestralidad fue la siguiente: 
+
+* `building`: `lambda_building` = 176 
+
+* `contents`: `lambda_contents` = 145
+
+* `profits` : `lambda_profits` = 47
+
+$\quad$ Así, la distribución de probabilidades para cada cobertura es la siguiente: 
+
+```{r Poissonplot, include=FALSE}
+Poisson.Plot <- function(mu, a=NA,b=NA,calcProb=(!is.na(a) | !is.na(b)),quantile=NA,calcQuant=!is.na(quantile)){
+  # Poisson
+  sd = sqrt(mu)
+  low = max(0, round(mu - 3 * sd))
+  high = round(mu + 5 * sd)
+  values = low:high
+  probs = dpois(values, mu)
+  plot(c(low,high), c(0,max(probs)), type = "n", 
+       xlab = "Numero de casos",
+       ylab = "Masas de probabilidad",
+       main = "")
+  lines(values, probs, type = "h", col = 2)
+  abline(h=0,col=3)
+  if(calcProb) {
+    if(is.na(a)){ a = 0 }
+    if(is.na(b)){
+      a = round(a)
+      prob = 1-ppois(a-1,mu)
+      title(paste("P(",a," <= Y ) = ",round(prob,6),sep=""),line=0,col.main=0)
+      u = seq(max(c(a,low)),high,by=1)
+    }
+    else {
+      if(a > b) {d = a; a = b; b = d;}
+      a = round(a); b = round(b)
+      prob = ppois(b,mu) - ppois(a-1,mu)
+      title(paste("P(",a," <= N <= ",b,") = ",round(prob,6),sep=""),line=0,col.main=0)
+      u = seq(max(c(a,low)),min(c(b,high)),by=1)
+    }
+    v = dpois(u,mu)
+    lines(u,v,type="h",col=4)
+  }
+  else if(calcQuant==T) {
+    if(quantile < 0 || quantile > 1)
+      stop("El cuantil debe estar entre 0 y 1")
+    x = qpois(quantile,mu)
+    title(paste("",quantile," quantile = ",x,sep=""),line=0,col.main=0)
+    u = 0:x
+    v = dpois(u,mu)
+    lines(u,v,type="h",col=0)
+  }
+  return(invisible())
+}
+
+n_building <- entrenamiento %>% filter(building>0) %>% group_by(year) %>% count()
+n_contents <- entrenamiento %>% filter(contents>0) %>% group_by(year) %>% count()
+n_profits <- entrenamiento %>% filter(profits>0) %>% group_by(year) %>% count()
+
+lambda_building <- mean(n_building$n)
+lambda_building
+Poisson.Plot(lambda_building)
+
+lambda_contents <- mean(n_contents$n)
+lambda_contents
+Poisson.Plot(lambda_contents)
+
+lambda_profits <- mean(n_profits$n)
+lambda_profits
+Poisson.Plot(lambda_profits)
+```
+
+
+```{r PoBuild}
+# Distrubución para building 
+Poisson.Plot(lambda_building)
+# Distribución para contents 
+Poisson.Plot(lambda_contents)
+# Distribución para profits 
+Poisson.Plot(lambda_profits)
+```
+
+## 3.2 Modelo para severidad
+
+$\quad$ Para la siniestralidad por cobertura se consideraron tres modelos: `Empírico`, `Lognormal` y `Beta Generalizada del Segundo Tipo`. El modelo `Empírico` ajusta perfectamente los datos pues sólo calcula las frecuencias relativas para cada monto de reclamo; sin embargo, al hacer estimaciones para los datos de `prueba` había un diferencia negativa considerable respecto a los datos observados verdaderos por lo que descartamos este modelo. El modelo `Beta Generalizada del Segundo Tipo` se descartó. Por lo tanto el modelo que se utilizará para predecir la siniestralidad por cobertura es el `Lognormal`: los parámetros para cada cobertura se ajustaron con ayuda de la librería `MASS`.
+
+```{r Lognormal, include=FALSE}
+# Ajuste de función de densidad para building
+Par.Lognormal_b <- fitdistr(entrenamiento$building[which(entrenamiento$building>0)],"lognormal")
+mean_log_b <- as.double(Par.Lognormal_b$estimate['meanlog'])
+sd_log_b <- as.double(Par.Lognormal_b$estimate['sdlog'])
+ent.building <- sort(unique(entrenamiento$building))
+dlognormal_b <- dlnorm(ent.building,mean_log_b,sd_log_b)
+dlognormal_b <- dlognormal_b/sum(dlognormal_b)
+# Ajuste de función de densidad para contents
+Par.Lognormal_c <- fitdistr(entrenamiento$contents[which(entrenamiento$contents>0)],"lognormal")
+mean_log_c <- as.double(Par.Lognormal_c$estimate['meanlog'])
+sd_log_c <- as.double(Par.Lognormal_c$estimate['sdlog'])
+ent.contents <- sort(unique(entrenamiento$contents))
+dlognormal_c <- dlnorm(ent.contents,mean_log_c,sd_log_c)
+dlognormal_c <- dlognormal_c/sum(dlognormal_c) 
+# Ajuste de función de densidad para profits
+Par.Lognormal_p <- fitdistr(entrenamiento$profits[which(entrenamiento$profits>0)],"lognormal")
+mean_log_p <- as.double(Par.Lognormal_p$estimate['meanlog'])
+sd_log_p <- as.double(Par.Lognormal_p$estimate['sdlog'])
+ent.profits<- sort(unique(entrenamiento$profits))
+dlognormal_p <- dlnorm(ent.profits,mean_log_p,sd_log_p)
+dlognormal_p <- dlognormal_p/sum(dlognormal_p) 
+```
+
+$\quad$ Visualizamos las funciones de densidad para cada cobertura. 
+
+```{r vis_cobertura}
+# Función de distrubición para building
+plot(x=ent.building,y=dlognormal_b,type='l', xlab='Monto de reclamo',ylab='f(b)',main='Distribución Lognormal para building') 
+# Función de distribución para contents
+plot(x=ent.contents,y=dlognormal_c,type='l', xlab='Monto de reclamo',ylab='f(c)',main='Distribución Lognormal para contents') 
+# Función de distribución para profits
+plot(x=ent.profits,y=dlognormal_p,type='l', xlab='Monto de reclamo',ylab='f(p)',main='Distribución Lognormal para profits') 
+```
+
+# 4. Estimación y comparación
+
+$\quad$ Con los modelos escogidos, `Poisson` para frecuencia de siniestros y `Lognormal` para severidad, nos encargamos de estimar los datos de `prueba`.
+
+## 4.1 Estimación para frecuencia de siniestros
+
+$\quad$ El modelo `Poisson` genera estimados para la frecuencia de siniestros anual. Las columnas `E.Bui`, `E.Con` y `E.Pro` corresponden al número de siniestros estimados para cada año, contrastado contra los datos reales observados `R.Bui`, `R.Con` y `R.Pro`.
+
+```{r estFreq,include=FALSE}
+# Datos reales
+num_buil <- prueba %>% filter(profits>0) %>% group_by(year) %>% count()
+num_cont <- prueba %>% filter(contents>0) %>% group_by(year) %>% count()
+num_prof <- prueba %>% filter(profits>0) %>% group_by(year) %>% count()
+# Comparación
+comparacion_freq <- as.data.frame(c('1989','1990'))
+colnames(comparacion_freq) <- c('year')
+comparacion_freq$R.Bui <- num_buil$n
+comparacion_freq$E.Bui <- rpois(2,lambda_building)
+comparacion_freq$R.Con <- num_cont$n
+comparacion_freq$E.Con <- rpois(2,lambda_contents)
+comparacion_freq$R.Pro <- num_prof$n
+comparacion_freq$E.Pro <- rpois(2,lambda_profits)
+```
+
+```{r compFreq}
+comparacion_freq
+```
+
+$\quad$ Observamos que hay una reversión de las tendencias que se habían observado hasta el año `1988` puesto que las estimaciones "están al revés" de los datos observados. Sin embargo, en términos totales tenemos un comportamiento suficientemente similar al observado realmente para `1989-1990`.
+
+```{r estFreqTotal,include=FALSE}
+freq_total <- as.data.frame(c('1989','1990'))
+colnames(freq_total) <- c('year')
+freq_total$R.Total <- c(comparacion_freq$R.Bui+comparacion_freq$R.Con+comparacion_freq$R.Pro)
+freq_total$E.Total <- c(comparacion_freq$E.Bui+comparacion_freq$E.Con+comparacion_freq$E.Pro)
+```
+
+```{r compFreq_total}
+freq_total
+```
+
+## 4.2 Estimación para severidad de reclamo
+
+$\quad$ El modelo `Lognormal` genera estimados para la severidad de reclamos individuales con base en la frecuencia de siniestros para cada cobertura. Recordamos que se ajustó una densidad específica para cada cobertura. Las columnas `E.Bui`, `E.Con` y `E.Pro` corresponden a las estimaciones respectivas para la siniestralidad agregada por cobertura. Contrastamos contra los datos observados realemente para la siniestralidad agregada anual por cobertura. 
+
+```{r estSins, include=FALSE}
+# Siniestralidad real
+sin_buil.89 <- sum(prueba$building[which(prueba$year=='1989')])
+sin_cont.89 <- sum(prueba$contents[which(prueba$year=='1989')])
+sin_prof.89 <- sum(prueba$profits[which(prueba$year=='1989')])
+sin_buil.90 <- sum(prueba$building[which(prueba$year=='1990')])
+sin_cont.90 <- sum(prueba$contents[which(prueba$year=='1990')])
+sin_prof.90 <- sum(prueba$profits[which(prueba$year=='1990')])
+# Comparación Lognormal
+comparacion_sins <- as.data.frame(c('1989','1990'))
+colnames(comparacion_sins) <- c('year')
+comparacion_sins$R.Bui <- c(sin_buil.89,sin_buil.90)
+comparacion_sins$E.Bui <- c(sum(rlnorm(comparacion_freq$E.Bui[1],mean_log_b+b,sd_log_b)),sum(rlnorm(comparacion_freq$E.Bui[2],mean_log_b+b,sd_log_b)))
+comparacion_sins$R.Con <- c(sin_cont.89,sin_buil.90)
+comparacion_sins$E.Con <- c(sum(rlnorm(comparacion_freq$E.Con[1],mean_log_c+c,sd_log_c)),sum(rlnorm(comparacion_freq$E.Con[2],mean_log_c+c,sd_log_c)))
+comparacion_sins$R.Pro <- c(sin_prof.89,sin_prof.90)
+comparacion_sins$E.Pro <- c(sum(rlnorm(comparacion_freq$E.Pro[1],mean_log_p+p,sd_log_p)),sum(rlnorm(comparacion_freq$E.Pro[1],mean_log_p+p,sd_log_p)))
+```
+
+```{r estSins_comp}
+comparacion_sins
+```
+
+$\quad$ Notamos una  ligera diferencia para el año `1990` pero, al igual que en las estimaciones para frecuenica, el comportamiento agregado sí llega a aproximarse al total observado real. 
+
+```{r estSinsTotal,include=FALSE}
+# Siniestralidades totales reales
+sin_tot.89 <- sin_buil.89 + sin_prof.89 + sin_cont.89
+sin_tot.90 <- sin_buil.90 + sin_prof.90 + sin_cont.90
+# Comparación Lognormal
+comparacion_sins_total <- as.data.frame(c('1989','1990'))
+colnames(comparacion_sins_total) <- c('year')
+comparacion_sins_total$R.Tot <- c(sin_tot.89,sin_tot.90)
+comparacion_sins_total$E.Tot <- c(comparacion_sins$E.Bui[1]+comparacion_sins$E.Con[1]+comparacion_sins$E.Pro[1],comparacion_sins$E.Bui[2]+comparacion_sins$E.Con[2]+comparacion_sins$E.Pro[2])
+```
+
+```{r estSins2}
+comparacion_sins_total
+```
+
+# 5. Agregación de siniestros
+
+$\quad$ Con las estimaciones hechas anteriormente podemos generar una estimación de la función de distribución para la siniestralidad agreagada. Generamos un `dataframe` con el tamaño de las frecuencias estimadas para los años `1989,1990` y los montos de reclamo estimados asociados a esos reclamos. Con este `dataframe` generado de estimados ajustamos una función de distribución `Lognormal` y la comparamos contra la verdadera real.
+
+```{r agregSins,include=FALSE}
+# Estimación de datos totales
+datos_estimados_b <- rlnorm(sum(n_building$n),meanlog = mean_log_b, sdlog = sd_log_b)
+datos_estimados_c <- rlnorm(sum(n_contents$n),meanlog = mean_log_c, sdlog = sd_log_c)
+datos_estimados_c[length(datos_estimados_c):length(datos_estimados_b)] <- 0
+datos_estimados_p <- rlnorm(sum(n_profits$n),meanlog = mean_log_p, sdlog = sd_log_p)
+datos_estimados_p[length(datos_estimados_p):length(datos_estimados_b)] <- 0
+datos_estimados_t <- datos_estimados_b+datos_estimados_c+datos_estimados_p
+# Modelo de distribución lognormal estimado
+Par.Lognormal_est <- fitdistr(datos_estimados_t,"lognormal")
+mean_log_est <- as.double(Par.Lognormal_p$estimate['meanlog'])
+sd_log_est <- as.double(Par.Lognormal_p$estimate['sdlog'])
+Completo.Unique_est <- sort(unique(datos_estimados_t))
+dlognormal_est <- dlnorm(Completo.Unique_est,mean_log_est,sd_log_est)
+dlognormal_est <- dlognormal_est/sum(dlognormal_est)
+qu_est <- as.double(Completo.Unique_est)
+Par.Lognormal_est
+# Modelo de distribución lognormal datos
+Par.Lognormal_t <- fitdistr(entrenamiento$total,"lognormal")
+Par.Lognormal_t
+mean_log_t <- as.double(Par.Lognormal_t$estimate['meanlog'])
+sd_log_t <- as.double(Par.Lognormal_t$estimate['sdlog'])
+Completo.Unique <- sort(unique(entrenamiento$total))
+dlognormal <- dlnorm(Completo.Unique,mean_log_t,sd_log_t)
+dlognormal <- dlognormal/sum(dlognormal)
+qu_total <- as.double(Completo.Unique)
+par(mfcol=c(1,2))
+```
+
+```{r plotsComparacion}
+plot(x=qu_est,y=dlognormal_est,type='l',xlab='Monto de reclamo',ylab='f(t) estimada',main='Distribución para siniestralidad agregada estimada')
+plot(x=qu_total,y=dlognormal,type='l',xlab='Monto de reclamo',ylab='f(t) real',main='Distribución para siniestralidad agregada real')
+```
+
+$\quad$ Notamos que la distribución estimada está por encima de la real observada. Por lo que estamos sobre estimando la siniestralidad esperada. Esto puede corregirse ajustando los parámetros de la distribución estimada. Se usará la distirbución lognromal real para el cálculo de primas.  
+
+# 6. Primas
+
+$\quad$ Ya con la función de distribución para la siniestralidad agregada calculamos la `Prima base`, `Prima Var al 99.9%` y la `Prima bajo el prinicipio de utilidad cero`, para ésta última usaremos una función de distribución exponencial que coincide con la `Prima bajo el principio exponencial`. 
+
+## 6.1 Primas sin modificaciones
+
+$\quad$ Las primas sin coaseguro, deducible ni límite de cobertura son las siguientes:
+
+```{r PrimasNormales, include=FALSE}
+# Prima base
+qu <- as.double(Completo.Unique)
+prima_total <- sum(qu*dlognormal)
+# Prima VaR al 99.9% para cada cobertura
+s <- 0 
+i <- 1
+while(s < 0.999){
+  s <- s + dlognormal[i]
+  i <- i + 1
+}
+prima_var.999_t <- qu[i]
+# Prima bajo principio de utilidad cero con función exponencial
+alpha <- 0.1
+prima_utz <- (1/alpha)*log(sum(exp(alpha*qu)*dlognormal))
+```
+
+```{r PrimasNo}
+# Prima base
+prima_total
+# Prima VaR al 99.9% 
+prima_var.999_t
+# Prima bajo principio de utilidad cero con función exponencial
+prima_utz
+```
+
+## 6.2 Primas modificadas
+
+$\quad$ Las modificaciones de coaseguro al 95%, un deducible del 10% y límite de cobertura para building de 13 unidades y límite para el reclamo total de 21 unidades inducen una modificación a los montos de siniestros y función de distribución.
+
+```{r modMontos,include=FALSE}
+# Aplicamos el límite de cobertura a building y total
+datos_limit <- entrenamiento
+datos_limit$building[which(datos_limit$building>13)] <- 13
+datos_limit$total[which(datos_limit$total>21)] <- 21
+# Modelo Lognormal para datos de entrenamiento limitados
+Par.Lognormal_limit <- fitdistr(datos_limit$total[which(datos_limit$total>0)],"lognormal")
+Par.Lognormal_limit
+mean_log_limit <- as.double(Par.Lognormal_limit$estimate['meanlog'])
+sd_log_limit <- as.double(Par.Lognormal_limit$estimate['sdlog'])
+Completo.Unique_limit <- sort(unique(datos_limit$total[which(datos_limit$total>0)]))
+dlognormal_lt <- dlnorm(Completo.Unique_limit,mean_log_t,sd_log_t)
+dlognormal_lt <- dlognormal_lt/sum(dlognormal_lt)
+ggplot(data=NULL,aes(x=Completo.Unique_limit,y=dlognormal_lt))+geom_path()+labs(title='Distribución Lognormal para total modificada',x='Monto de reclamo',y='f(t)')
+# Modificación con Deducible, Coaseguro, Límite de cobertura
+qu_estrella <- as.double(Completo.Unique_limit)
+deducible <- 0.1
+qu_estrella <- (1-deducible)*qu_estrella
+coaseguro <- 0.95
+qu_estrella <- coaseguro*qu_estrella
+```
+
+$\quad$ Estas modificaiones afectan a la `Prima base`, `Prima Var al 99.9%` y la `Prima bajo el prinicipio de utilidad cero` de la siguiente manera: 
+
+```{r primasMod,include=FALSE}
+# Prima base modificada
+prima_total_lt <- sum(qu_estrella*dlognormal_lt)
+# Prima VaR al 99.9% modificada
+s <- 0 
+i <- 1
+while(s < 0.999){
+  s <- s + dlognormal_lt[i]
+  i <- i + 1
+}
+prima_var.999_lt <- qu_estrella[i]
+# Prima bajo principio de utilidad cero con función exponencial modificada
+alpha <- 0.1
+prima_utz_lt <- (1/alpha)*log(sum(exp(alpha*qu_estrella)*dlognormal_lt))
+```
+
+```{r primasMod_show}
+# Prima base modificada
+prima_total_lt 
+# Prima VaR al 99.9% modificada
+prima_var.999_lt
+# Prima bajo principio de utilidad cero con función exponencial modificada
+prima_utz_lt
+```
+
+$\quad$ Notamos que todas las primas bajan, hecho que era de esperarse por las modificaciones realizadas a la póliza. 
+
+# 7. Resultados
+
+$\quad$ A través de nuestro modelo de riesgo colectivo, utilizando el modelo `Poisson` para la frecuencia de siniestros y el `Lognormal` para la severidad, obtuvimos valores cercanos a los reales. Sin embargo, por el lado de probabilidad de riesgo, las estimaciones están seriamente afectadas por la falta de una cartera de asegurados dada y no sólo aquellas que presentaron un siniestro. Podemos observar este hecho porque se presenta una discrepancia en estimación mayor contra los datos observados en `prueba`. Lo anterior lo podemos traducir a que la frecuencia de severidad real es menor a la estimada, por lo tanto el riesgo colectivo que presenta en este portafolio para los años `1989,1990` es cubierto por nuestro modelo. 
+
+$\quad$ Respecto al cálculo de primas, nuestra prima modificada (que incluye coaseguro, deducible y limite de cobertura) es más baja que aquella sin modificaciones. Lo anterior sucede porque parte del riesgo se transfiere al asegurado, pero otra gran parte descansa sobre el supuesto: queremos perder 1 vez en cada 100 años (Var.99); dado que estamos estimando datos anualmente. De igual manera se hace frente al principio de solvencia en el próximo siglo por medio del principio de utilidad cero que previene periodos de ruina en la proporción antes descrita.
+
+# 8. Conclusión 
+
+$\quad$ Nuestros modelos estocásticos nos permitieron medir la incertidumbre asociada a la severidad y su frecuencia. A través del enfoque frecuentista, que se obtiene  por la imputación del parámetro con el EMV, la predicción de una severidad agregada futura fue más nítida. En ocasiones tuvimos que  modificar las masas de probabilidad para que fueran compatibles para nuestro conjunto de datos. Para el problema de comparación y selección de modelos, ajustamos la lognormal para ser utilizada y que fuera eficiente al modelar con "fitdist". 
+
+$\quad$ Finalmente, la virtud de la metodología aquí expuesta es la flexibilidad que se le brinda al usuario. No hay duda que con una muestra más grande, la exactitud de los parámetros y estimaciones mejorarían sustancialmente. 
+
+# 9. Bibliografía 
+
+* Panjer (2006), Operational Risk Modeling Analytics, Capítulos 5 y 12.
+
+* Klugman et al (2004), Loss Model: From Data to Decisions, Secciónes 4.4, 4.6 y Capítulo 5.
+
+* Martínez (2019), Repertorio Cálculo Actuarial III, Primavera 2019, ITAM. 
+

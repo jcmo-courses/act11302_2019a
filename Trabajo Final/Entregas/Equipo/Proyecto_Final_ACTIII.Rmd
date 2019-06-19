@@ -1,0 +1,392 @@
+---
+title: "PROYECTO FINAL ACTUARIAL III"
+author: 
+- Michelle García Vazquez 143751
+- Luz Gardida 141657
+date: "Fecha entrega: 1 de junio de 2019"
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r Librerias, include=FALSE, echo=FALSE, warning=FALSE, message=FALSE}
+
+if(!require("readxl")){install.packages("readxl")}
+library(readxl) ### leer excel
+
+if(!require("dplyr")){install.packages("dplyr")}
+library(dplyr)
+
+if(!require("tidyverse")){install.packages("tidyverse")}
+library(tidyverse)
+
+if(!require("actuar")){install.packages("actuar")}
+library("actuar")
+
+if(!require("rriskDistributions")){install.packages("rriskDistributions")}
+library(rriskDistributions)  ### prueba fit
+
+if(!require("lubridate")){install.packages("lubridate")}
+library(lubridate) ### para fechas
+
+if(!require("fitdistrplus")){install.packages("fitdistrplus")}
+library(fitdistrplus)
+
+```
+
+```{r Base de datos, echo=FALSE, warning=FALSE, message=FALSE}
+library(readxl)
+setwd("C:/Users/hca/Downloads")
+Datos_PY <- read_excel("Datos_PY.xlsx")
+#View(Datos_PY)
+```
+
+En el presente documento se propondrá el análisis de tres modelos para describir tanto la frecuencia como la severidad individual de siniestros, posteriormente, seleccionaremos el modelo que tenga una mejor caracterización de nuestros datos para definir propuestas de agregación de riesgos y generar proyecciones anuales. 
+
+Con el propósito de este análisis, utilizaremos el archivo llamado "DanishInsurance MultivarData Full.csv" que  contiene información respecto los siniestros ocurridos de tipo building, contents y profits para los años 1980 a 1990. Nuestro enfoque toma como base los años 1980, 1981, 1982, y 1983 para la predicción de los años 1985 y 1986.   
+
+```{r Filtrar anios, echo=FALSE, warning=FALSE, message=FALSE}
+
+X_fecha <- Datos_PY$`FECHA EN ESPAÑOL`
+anio <- year(X_fecha)
+DATOS_FILTRADOS <- Datos_PY %>% filter(anio  == 1980  |  anio  ==  1981  |  anio  ==  1982  |  anio  ==  1983  )
+
+```
+
+```{r Renombrar variables, echo=FALSE, warning=FALSE, message=FALSE}
+
+X_total = c(DATOS_FILTRADOS$total)
+X_building = c(DATOS_FILTRADOS$building)
+X_contents = c(DATOS_FILTRADOS$contents)
+X_profits = c(DATOS_FILTRADOS$profits)
+
+```
+
+```{r Distribucion Frecuencia // binomial negativa, echo=FALSE, warning=FALSE, message=FALSE}
+SUBCONJUNTO <- data.frame(DATOS_FILTRADOS$building, DATOS_FILTRADOS$contents, DATOS_FILTRADOS$profits)
+a <- SUBCONJUNTO %>% transmute(Cont1 = ifelse(DATOS_FILTRADOS.building >0, 1,0),Cont2 = ifelse(DATOS_FILTRADOS.contents >0, 1,0),Cont3 = ifelse(DATOS_FILTRADOS.profits >0, 1,0))%>% mutate(Total = Cont1 + Cont2 + Cont3)
+SUBCONJUNTO <- SUBCONJUNTO %>% add_column(a$Total)
+conteo <- a$Total
+```
+
+**Definir nuestro modelo para la frecuencia de siniestros**
+
+Proponemos a las distribuciones binomial, poisson y binomial negativa para observar como se comporta nuestros datos respecto a la frecuencia de siniestros. De primera instancia, intuimos que el modelo menos eficiente sería el binomial dado que usando esta distribución asumimos que únicamente es posible un siniestro por póliza, a diferencia de las otras dos distribuciones que permiten más de un siniestro por asegurado. 
+
+Podemos ver que si graficamos las distribuciones propuestas respecto a nuestros datos base para ver su comportamiento, no nos da una significancia en cuanto a los datos, razón por la cual, usaremos la prueba de bondad de ajuste para mejor caracterización.
+
+```{r, echo= FALSE}
+nbinom_1 <- fitdist(conteo, "nbinom","mle")
+pois_1 <- fitdist(conteo, "pois","mle")
+binom_1 <- fitdist(conteo, "binom","mle",fix.arg=list(size=500),start=list(prob=0.2))
+
+summary(nbinom_1)
+summary(pois_1)
+summary(binom_1)
+
+
+plot(nbinom_1)
+plot(pois_1)
+plot(binom_1)
+
+```
+
+La prueba de bondad de ajuste es un método estadístico que consiste en determinar si los datos de cierta muestra corresponden a cierta distribución, nos permite ver cuál ajusta mejor. Resulta una metodología útil para ver la distribución teórica contra empírica. 
+
+
+```{r echo=FALSE}
+par(mfrow=c(2,2))
+plot.legend <- c("Nbinom","Poisson","Binomial")
+denscomp(list(nbinom_1,pois_1,binom_1),legendtext=plot.legend)
+cdfcomp(list(nbinom_1,pois_1,binom_1),xlogscale = TRUE, ylogscale = TRUE,legendtext=plot.legend)
+qqcomp(list(nbinom_1,pois_1,binom_1),legendtext=plot.legend)
+ppcomp(list(nbinom_1,pois_1,binom_1),legendtext=plot.legend)
+
+
+bondad_ajuste <- gofstat(list(nbinom_1,pois_1,binom_1),fitnames = c("Nbinom","Poisson","Binomial"))
+bondad_ajuste
+  
+
+```
+
+Después de hacer las pruebas de bondad de ajuste, a través de las gráficas observamos que no nos proporcionan información para definir cuál es el mejor modelo para la frecuencia de siniestros, concluimos que las gráficas no nos sirven para definición del modelo.
+
+Recordamos que el valor p nos indica que tan compatible es un modelo a nuestros datos muestra, nos interesa encontrar el que más se aproxime a cero. Para nuestras tres distribuciones propuestas obtenemos el valor p y nos damos cuenta que el menor se obtiene con la binomial negativa con un valor de 2.057177e-54, por lo que, definimos a ésta como nuestro mejor modelo para la distribución de frecuencias de siniestros. 
+
+
+**Definir nuestro modelo para la severidad individual de siniestros**
+
+Proponemos a las distribuciones normal, lognormal y gamma para observar como se comporta nuestros datos respecto a la severidad individual de siniestros. 
+
+
+Dadas las gráficas, concluimos que los datos muestra se ajustan mejor a la distribución gamma, por lo que, definimos a ésta como nuestro mejor modelo para la distribución de severidad individual de siniestros. 
+
+```{r Distribucion Severidad, echo=FALSE}
+
+reclamo_deduc_coase <- X_total / .90 / .95
+DATOS_FILTRADOS_1 <- mutate(DATOS_FILTRADOS , reclamo_deduc_coase)
+
+
+dist_1 <- fit.cont(reclamo_deduc_coase) ### Gamma
+
+```
+
+**Propuestas de agregación de riesgos y predicción**
+
+Para el modelo de agregación de riesgos, tomamos el número de siniestros de los años 1980, 1981, 1982, 1983, obtenemos la media y la usamos como medida para nuestra simulación (n=168). Simularemos 1000 observaciones donde para la frecuencia estimamos a través de la binomial negativa y para la severidad individual a través de la gamma. 
+
+```{r Agregación, echo=FALSE}
+
+media_siniestros_anio <- (166+170+181+153)/4
+
+Simulacion <- matrix(0,1000,168)
+for(i in 1:1000)
+  {
+  renglon <- c()
+  for(j in 1:167)
+    {
+    simu <- rnbinom(1,size=1.033083e+07,mu=1.819650)
+    if(simu>0)
+    {
+      reclamo <- rgamma(1,1.3128117,0.3013355)
+    }
+    else{reclamo <- 0}
+    renglon <- c(renglon, reclamo)
+    }
+  Agregado <- sum(renglon)
+  Simulacion[i,] <- c(renglon,Agregado)
+  }
+
+Simulacion <- data.frame(Simulacion)
+muestra_s <- Simulacion[,168]
+```
+
+Hacemos una comprobación empírica contra teórica para ver que tan aproximado resulta nuestro modelo. 
+
+```{r Agregación_1, echo=FALSE}
+
+X_fecha <- DATOS_FILTRADOS_1$`FECHA EN ESPAÑOL`
+anio <- year(X_fecha)
+datos_1980 <- DATOS_FILTRADOS_1 %>% filter(anio == 1980)
+datos_1981 <- DATOS_FILTRADOS_1 %>% filter(anio ==  1981)
+datos_1982 <- DATOS_FILTRADOS_1 %>% filter(anio ==  1982)
+datos_1983 <- DATOS_FILTRADOS_1 %>% filter(anio ==  1983)
+
+comprobacion <- c(sum(datos_1980$reclamo_deduc_coase),sum(datos_1981$reclamo_deduc_coase),sum(datos_1982$reclamo_deduc_coase),sum(datos_1983$reclamo_deduc_coase))
+
+mean(comprobacion)
+mean(muestra_s)
+
+```
+Con estos resultados, tenemos que nuestros datos agregados tienden a una normal. 
+
+```{r Distribucion Agregado, echo=TRUE}
+
+dist_2 <- fit.cont(muestra_s) ### Normal
+
+```
+
+**Validación de nuestra propuesta a través de una predicción anual del riesgo agregado para los años 1985 y 1986**
+
+```{r Prediccion, echo=FALSE}
+
+prediccion <- rnorm(2,610.21319,50.02233)
+
+dist_2 <- fit.cont(muestra_s) ### Normal
+
+X_fecha <- Datos_PY$`FECHA EN ESPAÑOL`
+anio <- year(X_fecha)
+DATOS_FILTRADOS_2 <- Datos_PY %>% filter(anio  == 1985  |  anio  ==  1986)
+
+reclamo_deduc_coase_2 <- DATOS_FILTRADOS_2$total / .90 / .95
+DATOS_FILTRADOS_3 <- mutate(DATOS_FILTRADOS_2 , reclamo_deduc_coase_2)
+
+
+X_fecha <- DATOS_FILTRADOS_2$`FECHA EN ESPAÑOL`
+anio <- year(X_fecha)
+datos_1985 <- DATOS_FILTRADOS_3 %>% filter(anio == 1985)
+datos_1986 <- DATOS_FILTRADOS_3 %>% filter(anio ==  1986)
+
+comprobacion <- c(sum(datos_1985$reclamo_deduc_coase_2),sum(datos_1986$reclamo_deduc_coase_2))
+
+mean(comprobacion)
+mean(prediccion)
+
+```
+
+**Cálculo de primas**
+
+La prima de riesgo es el monto que un asegurado paga por la cobertura parcial o total contra un riesgo. 
+
+Estimamos la prima pura de riesgo básica que se define como la pérdida esperada:
+Prima pura = 610.2132
+
+```{r Prima pura, echo=FALSE}
+
+Prima_pura <- sum(muestra_s)/1000
+Prima_pura
+
+```
+
+Estimamos la prima basada en el principio de la varianza con un nivel de alfa= .999 . Definida como la pérdida ajustada por un margen de aceptación de riesgo alfa, es más conservadora que la prima de riesgo pura. 
+
+```{r Prima por var, echo=FALSE}
+
+tprob.S.norm <- pnorm(qnorm(0.999), mean = 610.21319, sd = 50.02233, lower.tail = FALSE)
+VaR.S.norm <- 610.21319 + 50.02233 * qnorm(0.999)
+ES.S.norm <- 610.21319  + 50.02233 * dnorm(qnorm(0.999)) / (1-0.999)
+FS.tail.norm <- as.data.frame(c(tprob.S.norm ,VaR.S.norm ,ES.S.norm ))
+colnames(FS.tail.norm) <- c("gaussian")
+rownames(FS.tail.norm) <- c("Probability","VaR","E.S.")
+
+VaR.S.norm
+ES.S.norm
+FS.tail.norm
+
+```
+
+Por último, estimamos prima de riesgo a través del principio de utilidad cero. Esta prima resulta la más atractiva para la aseguradora pues aparte de que está en función de la utilidad, incorpora todos los momentos del riesgo en S.
+
+```{r Prima por utilidad 4.922157, echo=FALSE}
+
+a <- 1.1
+Prima_utilidad <- (1/a)*log(mgfnorm(a,mean=610.21319,sd=4.922157))
+Prima_utilidad
+
+```
+
+**ANÁLISIS DE SENSIBILIDAD**
+
+Queremos ver como cambian nuestras primas de riesgo, si agregamos las siguientes variables: 
+
+1.- Deducible del 10%
+
+2.- Límite de cobertura de la siguiente forma: 
+    límite total = 20 
+    límite building = 0
+    límite contents = 0
+    límite profits = 13 
+
+3.- Coaseguro del 95%
+
+```{r Limites de cobertura, echo=FALSE}
+
+limite_total = rep(22,670)
+Y_total = data.frame(a=X_total,b=limite_total)
+Y_total <- Y_total %>% group_by(a,b) %>% mutate(c=min(a,b))
+
+limite_building = rep(0,670)
+Y_building = data.frame(a=X_building,b=limite_building)
+Y_building <- Y_building %>% group_by(a,b) %>% mutate(c=min(a,b))
+
+limite_contents = rep(0,670)
+Y_contents = data.frame(a=X_contents,b=limite_contents)
+Y_contents <- Y_contents %>% group_by(a,b) %>% mutate(c=min(a,b))
+
+limite_profits = rep(13,670)
+Y_profits = data.frame(a=X_profits,b=limite_profits)
+Y_profits <- Y_profits %>% group_by(a,b) %>% mutate(c=min(a,b))
+
+Y_total
+Y_building
+Y_contents
+Y_profits
+
+
+```
+
+
+** Severidad limitada **
+
+```{r Distribucion Severidad limitada, echo=FALSE}
+
+total_lim <- Y_total$c
+
+dist_3 <- fit.cont(total_lim) ### Log-Normal
+
+```
+
+
+**Agregación limitada**
+
+```{r Agregación limitada, echo=FALSE}
+
+Simulacion <- matrix(0,1000,168)
+for(i in 1:1000){
+  renglon <- c()
+  for(j in 1:167){
+    simu <- rnbinom(1,size=1.033083e+07,mu=1.819650)
+    if(simu>0){
+      reclamo <- rlnorm(1,0.8788268,0.6341571)
+    }else{reclamo <- 0}
+    renglon <- c(renglon, reclamo)
+  }
+  Agregado <- sum(renglon)
+  Simulacion[i,] <- c(renglon,Agregado)
+}
+
+Simulacion <- data.frame(Simulacion)
+muestra_s_lim <- Simulacion[,168]
+
+mean(muestra_s_lim)
+
+```
+
+** Distribución de datos agregados **
+
+```{r Distribucion Agregado simulacion, echo=FALSE}
+
+dist_2 <- fit.cont(muestra_s_lim) ### Normal
+
+```
+
+** Primas de riesgo con análisis de sensibilidad **
+
+Prima pura
+
+```{r Prima pura limitada, echo=FALSE}
+
+Prima_pura_lim <- sum(muestra_s_lim)/1000
+Prima_pura_lim
+
+```
+
+**Prima basada en el principio de la varianza**
+
+```{r Prima por var limitada, echo=FALSE}
+
+tprob.S.norm_lim <- pnorm(qnorm(0.999), mean = 412.59875, sd = 28.77611, lower.tail = FALSE)
+VaR.S.norm_lim <- 412.59875 + 28.77611 * qnorm(0.999)
+ES.S.norm_lim <- 412.59875  + 28.77611 * dnorm(qnorm(0.999)) / (1-0.999)
+FS.tail.norm_lim <- as.data.frame(c(tprob.S.norm_lim ,VaR.S.norm_lim ,ES.S.norm_lim ))
+colnames(FS.tail.norm_lim) <- c("gaussian")
+rownames(FS.tail.norm_lim) <- c("Probability","VaR","E.S.")
+FS.tail.norm_lim
+
+
+VaR.S.norm_lim
+ES.S.norm_lim
+FS.tail.norm_lim
+
+```
+
+**Prima basada en el principio de utilidad cero**
+
+```{r Prima por utilidad, echo=FALSE}
+
+a <- 1.1
+Prima_utilidad_lim <- (1/a)*log(mgfnorm(a,mean=412.59875,sd=5.36434))
+Prima_utilidad_lim
+
+```
+
+
+Concluimos que nuestros modelos definidos en un principio fueron correctos para la distribución y predicción de los datos. 
+
+
+
+
+

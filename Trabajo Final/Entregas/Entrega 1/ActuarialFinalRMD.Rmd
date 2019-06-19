@@ -1,0 +1,402 @@
+---
+title: "Proyecto Final. Cálculo Actuarial III."
+author: "Equipo #2. Diego García Santoyo 143659, Andre Villafaña Pérez 139856, Gerardo Ivan Montero Carniago 145179"
+date: "1 de junio de 2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+if(!require("EnvStats")){install.packages("EnvStats")}
+if(!require("VGAM")){install.packages("VGAM")}
+if(!require("MASS")){install.packages("MASS")}
+if(!require("GB2")){install.packages("GB2")}
+if(!require("evir")){install.packages("evir")}
+if(!require("fitdistrplus")){install.packages("fitdistrplus")}
+
+
+library(EnvStats)
+library(VGAM)
+library(MASS)
+library(GB2)
+library(evir)
+library(fitdistrplus)
+```
+
+#1)Introducción.
+Se analizó el conjunto de datos de entrenamiento de siniestros a edificios comerciales por incendio en Dinamarca para las fechas del 1 de enero de 1980 al 31 de diciembre de 1987, para poder predecir los siniestros del periodo del 1 de enero de 1988 al 31 de diciembre de 1988. La base de datos con la que se trabajó cuenta con 5 variables: fecha del siniestro, building, contents, profits y el total que representa el monto total de los daños en cada fecha. Todas con soporte en los reales.
+
+Nos interesa la modelación del monto total de daños para el periodo de prueba (1 de enero de 1988 al 31 de diciembre de 1988) y para ello primero realizaremos un análisis exploratorio de datos donde veremos la frecuencia y severidades del periodo total sobre el monto total de daños.
+
+```{r, include=FALSE}
+data <- read.csv("DanishInsurance_MultivarData_Full.csv")
+head(data)
+
+data$date <- as.Date(data$date,"%m/%d/%Y")
+data$date <-  as.numeric(format(data$date, "%Y"))
+
+severidades.train <- data[which(data$date<="1987"),c("date","building","contents","profits","total")]
+severidades.test <- data[which(data$date=="1988"),c("date","building","contents","profits","total")]
+
+```
+Así luce nuestro histograma de los datos del periodo de entrenamiento para las severidades individuales:
+
+
+```{r, echo=FALSE,fig.width=8, fig.height=5}
+histtotal<- hist(severidades.train$total,breaks=300,main="Histograma Severidad Individual",xlab="Monto",ylab="Frecuencia")
+```
+
+#2)Modelación de la frecuencia de siniestros.
+ 
+Se muestra cuál fue la frecuencia de siniestros por año de nuestros datos de entrenamiento:
+```{r,include=FALSE}
+datosfrec <- as.data.frame(severidades.train)
+datosfrec[,"iota"] <- 0
+datosfrec[which(severidades.train$total>0),"iota"] <- 1
+Emp<-table(datosfrec[,c("date","iota")])
+Emp
+Ocurrencias <- as.matrix(table(datosfrec[which(datosfrec$iota==1),"date"]))
+Ocurrencias1 <- as.data.frame(Ocurrencias)
+Ocurrencias2 <- ts(Ocurrencias1,start = c(1980), frequency = 1)
+plot(Ocurrencias2)
+siniestrosXano<-c(0,0,0,0,0,0,0,0)
+for (i in 1:8) { 
+  siniestrosXano[i]=length(as.vector(Ocurrencias1$V1[which(severidades.train$date==(1979+i))])) 
+  }
+```
+```{r,echo=FALSE}
+Emp
+```
+
+Con nuestros datos  de entrenamiento, se van a modelar 3 distribuciones propuestas para posteriormente predecir el número de siniestros en la fecha de prueba de 1988-1989.
+Se eligieron como distribuciones propuestas para modelar la frecuencia a la distribución Poisson, la distribución Binomial Negativa y la distribución Geométrica. Dichas distribuciones de uso relevante para modelos discretos, como lo es en nuestro caso la frecuencia de siniestros.
+
+```{r,include=FALSE}
+fpois <- fitdist(siniestrosXano,"pois") 
+fbinneg <- fitdist(siniestrosXano,"nbinom") 
+fgeo <- fitdist(siniestrosXano,"geom") 
+
+```
+
+
+A nuestros datos de frecuencia se le ajustaron las tres distribuciones propuestas y se compararon con la distribución empírica como primer criterio de elección:
+
+```{r,include=FALSE}
+plot.legend <- c("Poisson", "Binomial Negativa", "Geometrica") 
+```
+
+
+```{r,echo=FALSE,fig.width=8, fig.height=6}
+cdfcomp(list(fpois, fbinneg, fgeo), legendtext = plot.legend)
+```
+
+Se puede ver claramente que la distribución Geométrica no ajusta bien, y que la Binomial Negativa quizás sea la mejor ajustada. 
+
+Como segundo criterio obtuvimos el respectivo $Q-Qplot$ y $P-Pplot$:
+
+```{r,echo=FALSE,fig.width=8, fig.height=5}
+plot.legend <- c("Poisson", "Binomial Negativa", "Geometrica") 
+qqcomp(list(fpois, fbinneg, fgeo), legendtext = plot.legend)
+ppcomp(list(fpois, fbinneg, fgeo), legendtext = plot.legend)
+```
+En donde de nuevo la distribución Geométrica queda muy mal ajustada, por lo que queda descartada. Tanto en el $Q-Qplot$ como en el $P-Pplot$ la que mejor se ajusta es la Binomial Negativa de nuevo.
+
+Como último criterio tenemos el $AIC$ y $BIC$.
+```{r,echo=FALSE}
+gofstat(list(fpois,fbinneg,fgeo), fitnames=c("Poisson", "Binomial Negativa", "Geometrica"))
+
+```
+Con un $AIC$ y $BIC$ menor a las otras distribuciones, la distribución Binomial Negativa confirma ser la que mejor se ajusta a nuestros datos de frecuencia. Por lo que se escoje para modelar la frecuencia de siniestros de nuestro periodo de prueba a dicha dstribución. Por lo tanto $N_i\sim NB$.
+
+#3)Modelación de la severidad de siniestros.
+Ahora, para la modelación de la severidad individual de siniestros se consideró que los datos podrían describirse de mejor manera con la distribución Weibull, la distribución Gamma y la distribución Exponencial; distribuciones continuas para la estimación de variables continuas como lo es en nuestro caso la severidad de siniestros, y también conocidas por su amplio uso en la modelación de severidades en el ambito de seguros.
+
+```{r, include=FALSE}
+fw <- fitdist(severidades.train$total, "weibull")
+fg <- fitdist(severidades.train$total, "gamma")
+fexp<-fitdist(severidades.train$total,"exp")
+
+
+a <- fw$estimate[1]
+b <- fw$estimate[2]
+e <- fg$estimate[1]
+f <- fg$estimate[2]
+c <- fexp$estimate[1]
+```
+Se ajustaron dichas distribuciones a nuestros datos de severidad en el periodo de entrenamiento.
+
+Para comenzar a comparar se muestra el histograma de los datos empirico y los histogramas de cada distribución, dejando notar que la distribución Weibull y Exponencial son las mas parecidas al histograma de los datos, y la Gamma esta un poco mal ajustada en la parte de valores muy pequeños.
+
+```{r, echo=FALSE,fig.width=8, fig.height=5}
+par(mfrow=c(1,2))
+hist_sevind<- hist(severidades.train$total,breaks=400,xlim=c(0,30),main="Hist Sev Indvidual Empírica")     
+hist(rweibull(length(severidades.train$total),a,b),breaks=50,xlim=c(0,30),main="Hist Sev Ind Weibull")    
+hist(rgamma(length(severidades.train$total),e,f),breaks=50,main="Hist Sev Ind Gamma")
+hist(rexp(length(severidades.train$total),c),breaks=50,main="Hist Sev Ind Exponencial")
+par(mfrow=c(1,1))
+```
+El criterio de comparación con la distribución empírica arroja la siguiente gráfica, en donde las tres distribuciones parecen ajustarse bastante bien.
+
+```{r, echo=FALSE,fig.width=8, fig.height=5}
+plot.legend1 <- c("Weibull", "Exponencial", "Gamma") 
+cdfcomp(list(fw, fexp, fg), legendtext = plot.legend1)
+```
+
+Con el criterio de $Q-Qplot$ y $P-Pplot$ ya se observa diferencia notoria entre la distribución Gamma con la Exponencial y Weibull, que son las que mas se ajustan en estos criterio. *Notar que en el $P-Pplot$ la Exponencial y la Weibull quedan casi sobrepuestas.
+
+```{r,echo=FALSE,fig.width=8, fig.height=5}
+plot.legend1 <- c("Weibull", "Exponencial", "Gamma") 
+qqcomp(list(fw, fexp, fg), legendtext = plot.legend1)
+ppcomp(list(fw, fexp, fg), legendtext = plot.legend1)
+```
+
+Hasta este punto se ha visto que la Gamma no es la mas indicada para la modelación de la siniestralidad en este caso, pero falta ver cuál distribución, entre la Exponencial y Weibull, se aproxima mejor. 
+
+Pasamos al último criterio para decidir la distribución adecuada, el criterio de $AIC$ y $BIC$, el cuál nos da a notar que en ambos criterios la Gamma es la mejor, pero tomando en cuenta que no es la mas indicada tanto en los histogramas, como en el $Q-Qplot$ y el $P-Pplot$, se decide elegir la distribución Exponencial, siendo menor en $AIC$ y $BIC$, aunque por muy poco, que la Weibull. Por lo tanto $X_i\sim Exp$.
+
+
+```{r,echo=FALSE,fig.width=8, fig.height=5}
+gofstat(list(fw, fexp, fg), fitnames=c("Weibull", "Exponencial", "Gamma"))
+```
+
+Y la densidad de la distribucion exponencial ajustada es:
+
+```{r,echo=FALSE}
+severidades.train.unique <- sort(unique(severidades.train$total))
+d.exp <- dexp(severidades.train.unique, 
+              fexp$estimate[1])
+d.exp<-d.exp/sum(d.exp)
+
+plot(severidades.train.unique, d.exp, type="l", 
+     ylab="Densidad",
+     xlab="X", 
+     xlim=c(0,65))
+title(main = "Densidad exponencial")
+```
+  
+
+
+#4) Montos Agregados de Siniestros 
+Con lo obtenido anteriormente se hará una predicción del monto agregado del siniestro $S(1989)$, utilizando los datos de entrenamiento.
+
+##Monto Individual
+En este caso suponemos que las severidades individuales se comportan como una variable aleatoria exponencial y hacemos una convolución directa. 
+Para ello necesitamos calcular la probabilidad de que haya un siniestro en cada una de las J 
+pólizas. Suponiendo que en este caso J es 500 y que el número de siniestros ocurridos es siempre
+la mitad considerando que en promedio se da este número de siniestros.
+
+Tomando a la severidad del siniestro como una variable aleatoria que se distribuye Exponencial y el monto de reclamos 250, resulta que el monto individual del siniestro con el siguiente valor:
+
+```{r,echo=FALSE}
+set.seed(145)
+muexp<-fexp$estimate[1]
+J<-500
+sinexp<- rep(0,J/2)
+for(i in 1:J/2){
+  sinexp[i]<-rexp(1,rate=muexp)
+}
+sum(sinexp)/(J/2)
+```
+
+##Agregado/Colectivo
+En este modelo además de la variable de severidad del siniestro, la variable de frecuencia de siniestros ocurridos también se considera como una variable aleatoria. La severidad del siniestro se distribuye Exponencial, mientras que la de frecuencia se distribuye Binomial Negativa.
+
+Usando dichas distribuciones resulta que el monto agregado del siniestro es el siguiente:
+
+```{r,echo=FALSE}
+set.seed(145)
+sizenbin<-fbinneg$estimate[1]
+munbin<-fbinneg$estimate[2]
+
+NBE0<-rnbinom(1000,size=sizenbin,mu=munbin)
+NBE<- mean(NBE0)
+siniestroexpCB<- rep(0,NBE)
+for(i in 1:NBE){
+  siniestroexpCB[i]<-rexp(1,rate=muexp)
+}
+sum(siniestroexpCB)
+```
+#5) Validación de propuesta
+##Individual
+El promedio empírico de la severidad individual para el periodo de estudio (1980-1987) es de 3.24 mientras que en 1988 (el año de predicción) es de 3.78; cifra superior, aunque no por mucho, a nuestra estimación de 3.20.
+Esta diferencia se puede deber al valor atípico de 263.250366 producido el 07/15/1980 que aumenta mucho el promedio empírico. Por otro lado, al hacer el mismo análisis con la distribución Weibull que fue nuestra segunda mejor ajustada, el monto individual se vuelve 2.752856, monto más distanciado del empírico, que nuestra estimación.
+
+```{r,include=FALSE}
+set.seed(145)
+shapewei<-fw$estimate[1]
+scalewei<-fw$estimate[2]
+J<-500
+sinwei<- rep(0,J/2)
+for(i in 1:J/2){
+  sinwei[i]<-rweibull(1,shape=shapewei,scale = scalewei)
+}
+sum(sinwei)/(J/2)
+```
+
+## Agregado/Colectivo
+El promedio del monto agregado anual para el periodo de estudio (1980-1987) es de 609 mientras que en el año 1988 es de 793; nuestro modelo arroja una predicción de 608.5813 $\approx$ 609 para el año 1988. Puede verse que el modelo se ajusta precisamente para la información histórica de 1980-1987 aunque difiere del monto empírico de 1988, esto debido a que en el año 1988 hubo varios valores extremos observados.
+
+#6)Prima de riesgo agregada para el periodo 1988-1989.
+Con base en los modelos seleccionados para frecuencia (Binomial Negativa) y severidad (Exponencial) se calcularon tres primas de riesgo agregadas para el periodo de prueba 1988-1989, la prima de riesgo base, la prima TVar al 99.9% y la prima con principio de utilidad cero.
+
+Prima base:
+
+```{r,echo=FALSE}
+sizenbin<-fbinneg$estimate[1]
+munbin<-fbinneg$estimate[2]
+rateexp<- fexp$estimate[1]
+J=500 #Tamaño de la cartera 
+frecbase1<-rnbinom(1000,size=sizenbin,mu=munbin)
+frecbase<- mean(frecbase1)
+montoagregbase<- rep(0,frecbase)
+for(j in 1:frecbase){
+  montoindbase<- rep(0,J/2)
+  for(i in 1:J/2){
+    montoindbase[i]<-rexp(1,rate=rateexp)
+  }
+  montoagregbase[j]<-sum(montoindbase)
+}
+Primabase<-mean(montoagregbase)/(J)
+Primabase
+```
+
+
+Prima TVar con $\alpha$=.999 :
+
+```{r,echo=FALSE}
+Completo.unique<-sort(unique(severidades.train$total))
+qu<- as.double(Completo.unique)
+sum<-0
+i<-1
+while (sum<.999){
+  sum<-sum+d.exp[i]
+  i<-i+1
+}
+PrimaVar<-qu[i]
+PrimaVar
+```
+
+Prima con el principio de utilidad cero: 
+Para esta prima se propone utilizar una función de utilidad exponencial, coincidiendo de esta manera con la prima de riesgo basada en el principio exponencial. Se usó una parámetro de aversión al riesgo de $\beta$=0.05.
+
+```{r,echo=FALSE}
+beta0<- .05
+Primaut<-(1/beta0)*log(sum(exp(beta0*qu)*d.exp))
+Primaut
+```
+
+Por último, se calcularon las mismas primas pero con criterios adicionales sobre las severidades. Deducible del 10%, Límite de cobertura para building de 15, Límite de cobertura para contents de 10, Límite de cobertura para el total de 26 y un coaseguro del 95%, obteniendo una nueva base filtrada con dichos criterios.
+```{r, include=FALSE}
+severidades.train2 <- data[which(data$date<="1987"),c("date","building","contents","profits","total")]
+
+for(i in 1:nrow(severidades.train2)){
+  severidades.train2$total[i]<-severidades.train2$total[i]*(.9)
+  severidades.train2$building[i]<-severidades.train2$building[i]*(.9)
+  severidades.train2$contents[i]<-severidades.train2$contents[i]*(.9)
+  severidades.train2$profits[i]<-severidades.train2$profits[i]*(.9)
+}
+
+for( i in 1:nrow(severidades.train2)){
+  if (severidades.train2$building[i]>=15)
+    severidades.train2$building[i]<-15
+  else (
+    severidades.train2$building[i]<-severidades.train2$building[i] 
+  )
+  if (severidades.train2$contents[i]>=10)
+    severidades.train2$contents[i]<-10
+  else (
+    severidades.train2$contents[i]<-severidades.train2$contents[i] 
+  )
+  severidades.train2$total[i]=severidades.train2$building[i]+severidades.train2$contents[i]+severidades.train2$profits[i]
+  if (severidades.train2$total[i]>=26)
+    severidades.train2$building[i]<-26
+  else (
+    severidades.train2$total[i]<-severidades.train2$total[i] 
+  )
+}
+
+for(i in 1:nrow(severidades.train2)){
+  severidades.train2$total[i]<-severidades.train2$total[i]*(.95)
+  severidades.train2$building[i]<-severidades.train2$building[i]*(.95)
+  severidades.train2$contents[i]<-severidades.train2$contents[i]*(.95)
+  severidades.train2$profits[i]<-severidades.train2$profits[i]*(.95)
+}
+
+fexp2 <- fitdist(severidades.train2$total, "exp")
+rateexp1<-fexp2$estimate[1]
+
+severidades.train.unique1 <- sort(unique(severidades.train2$total))
+d.exp2 <- dexp(severidades.train.unique1, 
+              fexp2$estimate[1])
+d.exp2<-d.exp2/sum(d.exp2)
+
+```
+
+Prima base:
+
+```{r,echo=FALSE}
+frecbase2<-rnbinom(1000,size=sizenbin,mu=munbin)
+frecbase22<- mean(frecbase2)
+montoagregbase1<- rep(0,frecbase22)
+for(j in 1:frecbase22){
+  montoindbase1<- rep(0,J/2)
+  for(i in 1:J/2){
+    montoindbase1[i]<-rexp(1,rate=rateexp1)
+  }
+  montoagregbase1[j]<-sum(montoindbase1)
+}
+Primabase1<-mean(montoagregbase1)/(J)
+Primabase1
+```
+Prima TVar con $\alpha$=.999 :
+
+```{r,echo=FALSE}
+Completo.unique1<-sort(unique(severidades.train2$total))
+qu1<- as.double(Completo.unique1)
+sum<-0
+i<-1
+while (sum<.999){
+  sum<-sum+d.exp2[i]
+  i<-i+1
+}
+PrimaVar1<-qu1[i]
+PrimaVar1
+```
+
+Prima con el principio de utilidad cero usando función de utilidad exponencial y un parametro de aversion al riesgo de $\beta$=0.05:
+
+```{r,echo=FALSE}
+
+Primaut1<-(1/beta0)*log(sum(exp(beta0*qu1)*d.exp2))
+Primaut1
+```
+
+#7) Comentarios Finales
+Para la modelación de frecuencia de siniestros de nuestra base de datos se propusieron tres distribuciones, en donde la Binomial Negativa resultó la mejor ajustada en cada uno de los criterios aplicados (comparación con la ditribución empírica, Q-Qplot, P-Pplot, AIC y BIC). 
+
+Por otro lado para la modelación de la severidad de siniestros propusimos tres distribuciones utilizadas ampliamente en el ámbito de seguros. A diferencia de la frecuencia, no hubo una única distribucion que ajustara bajo todos los criterios, por lo que despues de comparar criterios, se decidió usar la distribución exponencial como la que mejor ajustaba los datos. Usando la comparación de histogramas, el criterio de Q-Qplot y el P-Pplot, la distribución Weibull y exponencial se ajustan casi de la misma manera, mientras que la distribución Gamma difería bastante de los datos empíricos; sin embargo bajo el criterio AIC y BIC la que mejor ajustaba era la Gamma, aunque por los criterios anteriores fue descartada, quedandonos así con la comparación de la Weibull y exponencial para el último criterio.
+
+Con estas distribuciones seleccionadas calculamos la proyección de los montos individuales y agregados, y comparando esos valores con los empíricos de 1988, nuestra proyeccion subestima 11% al valor real en el monto individual, y subestima 22% en el caso del monto agregado real. La diferencia puede explicarse en parte por el valor atípico del 7/15/1980, que no solo es el más grande, sino que llega a ser casi el doble de la segunda observación más grande.
+
+Finalmente se estimaron los tres tipos de primas con sus respectivos supuestos para nuestros datos originales y también las mismas primas con deducible, limites de cobertura y coaseguro, dejando notar que al haber limites de cobertura, controlas los valores atípicos y por ende se tiene la ventaja de bajar las primas al tener una siniestralidad más estable.
+
+\begin{thebibliography}{X}
+\bibitem{Dan} \textsc{Deelstra, G.} y \textsc{G. Plantin},
+\textit{Risk Theory and Reinsurance},
+Springer, England, United Kingdom, págs. 17-22, 2014.  
+\bibitem{Ov1} \textsc{Martínez-Ovando, J.C.},
+<<Primas de riesgo: Ejemplos>>,
+\textit{Sesion 17: Primas de riesgo},
+ITAM, M\'exico, Primavera 2019.
+\bibitem{Ov2} \textsc{Martínez-Ovando, J.C.},
+<<Modelo de agregada de riesgo>>,
+\textit{Sesion 13 - Laboratorio},
+Departamento Acade\'mico de Actuari\'a, M\'exico, Primavera 2019.
+\bibitem{Ov3} \textsc{Martínez-Ovando, J.C.},
+<<Modelo de severidades individuales>>,
+\textit{Sesion 23 - Laboratorio},
+Departamento Acade\'mico de Actuari\'a, M\'exico, Primavera 2019.
+\bibitem{sev} \textsc{Schevchenko, P.},
+\textit{Modelling Operational Risk Using Bayesian Inference},
+Springer, England, United Kingdom, 2011.
+\end{thebibliography}

@@ -1,0 +1,557 @@
+---
+title: "Proyecto Final - Calculo Actuarial III"
+author: '-'
+date: "7/5/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+```
+
+```{r Librerias necesarias, include=FALSE}
+
+if(!require("timeSeries")){install.packages("timeSeries")}
+library("timeSeries")
+
+if(!require("xts")){install.packages("xts")}
+library("xts")
+
+if(!require("actuar")){install.packages("actuar")}
+library("actuar")
+
+if(!require("fitdistrplus")){install.packages("fitdistrplus")}
+library("fitdistrplus")
+
+if(!require("forecast")){install.packages("forecast")}
+library("forecast")
+```
+
+```{r Funciones utilizadas, include=FALSE}
+
+ECM <- function(Y,Y_est){
+  return(sqrt(mean((Y-Y_est)^2)))
+}
+
+```
+
+### 1. Division de datos entrenamiento y datos de prueba
+
+```{r Division de datos de entrenamiento y validacion, include=FALSE}
+set.seed(30052019)
+#Carga de datos
+#DanishInsurance_MultivarData_Full <- read.csv("DanishInsurance_MultivarData_Full.csv")
+datos <- DanishInsurance_MultivarData_Full
+
+datos["date"] <- as.Date(datos$date,format = "%m/%d/%Y")
+
+set.seed(30052019)
+
+#Se considera que los datos son los pagos realizados por la aseguradora 
+#Por lo tanto ya tienen deducible del 10% y coaseguro del 5%
+#por lo tanto se consideran los montos como pago/0.9
+
+datos["Monto"] <- (datos$total/0.9)/0.95
+
+#Division de datos
+ts <- timeSeries(datos[,2:6],charvec = datos$date)
+Train <- window(ts,start="1980-01-03",end="1987-12-31")
+Test <- window(ts,start="1988-01-01",end="1990-12-31")
+
+```
+
+
+### Modelos para la frecuencia de siniestros anual
+
+Ajustamos 3 modelos para la frecuencia de siniestros. El modelo binomial negativa, poisson y binomial
+El ajuste y la estimacion de los parametros se realiza mediante el metodo de **maxima verosimilitud**
+
+```{r Frecuncia de Siniestros, echo=FALSE}
+
+#Creacion de variable auxilar de siniestro
+Siniestro <- c()
+for (i in 1:length(Train[,1])){
+  sin <- 0
+  for (j in 1:3){
+    if (Train[i,j]>0){
+      sin <- sin+1
+    }
+  }
+  Siniestro <- c(Siniestro,sin)
+}
+
+Train_frec <- cbind(Train,Siniestro)
+
+#Separacion por mes 
+indice_mensual <- endpoints(Train_frec, on="months")
+indice_mensual <- indice_mensual[2:length(indice_mensual)]
+
+#Agregacion siniestros por mes de los valores de entrenamiento
+Sin_mensual <- c()
+cont<-1
+for (i in indice_mensual) {
+  sin_mens <- 0
+  while (i>=cont) {
+    sin_mens <- sin_mens + Train_frec$SS.1[cont]
+    cont <- cont+1
+  }
+  Sin_mensual <- c(Sin_mensual,sin_mens)
+}
+
+
+#Modelos
+fit.nbin_frec <- fitdist(Sin_mensual,"nbinom","mle")
+fit.po_frec <- fitdist(Sin_mensual,"pois", "mle")
+fit.bin_frec <- fitdist(Sin_mensual,"binom", "mle", fix.arg=list(size=500), start=list(prob=0.2))
+
+#Graficas comparativas 
+par(mfrow=c(2,2))
+plot.legend <- c("N. Binom", "Poisson", "Binomial")
+denscomp(list(fit.nbin_frec, fit.po_frec, fit.bin_frec), legendtext = plot.legend)
+cdfcomp (list(fit.nbin_frec, fit.po_frec, fit.bin_frec), legendtext = plot.legend)
+qqcomp (list(fit.nbin_frec, fit.po_frec, fit.bin_frec), legendtext = plot.legend)
+ppcomp (list(fit.nbin_frec, fit.po_frec, fit.bin_frec), legendtext = plot.legend)
+
+#Errores cuadraticos medios de cada modelo
+Error.nbin <- ECM(Sin_mensual,rnbinom(length(Sin_mensual),fit.nbin_frec$estimate[1],mu=fit.nbin_frec$estimate[2]))
+Error.po <- ECM(Sin_mensual,rpois(length(Sin_mensual),fit.po_frec$estimate[1]))
+Error.bin <- ECM(Sin_mensual,rbinom(length(Sin_mensual),3,fit.bin_frec$estimate[1]))
+
+Errores <- c(Error.nbin,Error.po,Error.bin)
+df_errores <- data.frame(Errores)
+rownames(df_errores) <- c("NBinomial","Poisson","Binomial")
+
+df_errores
+
+fit.frecuencia <- fit.nbin_frec
+
+gofstat(list(fit.nbin_frec, fit.po_frec, fit.bin_frec), fitnames = c("N. Binom", "Poisson", "Binomial"))
+
+fit.nbin_frec
+fit.po_frec 
+fit.bin_frec
+
+```
+
+```{r Descripcion de los modelos de frecuencia, include=FALSE}
+
+#Parametros de cada modelo
+summary(fit.nbin_frec)
+summary(fit.po_frec)
+summary(fit.bin_frec)
+
+```
+Dadas las pruebas graficas observamos que la distribucion Binomial es la que mejor se ajusta a los datos para modelar la frecuencia de siniestros de por el enfoque de riesgo coletivo. Por lo que asignamos la distribucion Binomial con parametros $n = 3, p= 0.6414008$, esto es $(X_i|) \sim Bin(n = 3, p = 0.6414008)$.
+
+### 4. Severidad individual
+
+Los 3 modelos a proponer para la severidad individual son las distribuciones: gamma, weibull y Pareto. Se busca observar que distribucion se ajusta mejor mediante el metodo de maxima verosimilitud. 
+
+
+```{r Severidad de Siniestros, echo=FALSE}
+
+##Severidad individual del Total
+#Antes de modificaciones por deducible o limite de cobertura
+
+#Datos de severidades del Total (>0) (todos)
+
+#Modelos
+fit.gamma_sev <- fitdist(Train$Monto, "gamma")
+fit.weibull_sev  <- fitdist (Train$Monto, "weibull")
+fit.lnor_sev  <- fitdist(Train$Monto,"lnorm")
+fit.pareto_sev <- fitdist(Train$Monto, "pareto",fix.arg=list(shape=15), start=list(scale = 70))
+
+#Graficas comparativas 
+par(mfrow=c(2,2))
+plot.legend <- c("Weibull", "gamma", "pareto")
+denscomp(list(fit.weibull_sev, fit.gamma_sev, fit.pareto_sev), legendtext = plot.legend)
+cdfcomp (list(fit.weibull_sev, fit.gamma_sev, fit.pareto_sev), legendtext = plot.legend)
+qqcomp  (list(fit.weibull_sev, fit.gamma_sev, fit.pareto_sev), legendtext = plot.legend)
+ppcomp  (list(fit.weibull_sev, fit.gamma_sev, fit.pareto_sev), legendtext = plot.legend)
+
+#Errores cuadraticos medios de cada modelo
+Error.gamma <- ECM(Train$Monto,rgamma(length(Train$Monto),fit.gamma_sev$estimate[1],fit.gamma_sev$estimate[2]))
+Error.weibull <- ECM(Train$Monto,rweibull(length(Train$Monto),fit.weibull_sev$estimate[1],fit.weibull_sev$estimate[2]))
+Error.lnor <- ECM(Train$Monto,rlnorm(length(Train$Monto),fit.lnor_sev$estimate[1],fit.lnor_sev$estimate[2]))
+Error.pareto <- ECM(Train$Monto,rpareto(length(Train$Monto),12,fit.pareto_sev$estimate[1]))
+
+Errores <- c(Error.gamma,Error.weibull,Error.lnor,Error.pareto)
+df_errores <- data.frame(Errores)
+rownames(df_errores) <- c("Gamma","Weibull","Log-Normal","Pareto")
+
+df_errores
+
+fit.severidad <- fit.pareto_sev
+
+```
+
+```{r Descripcion de los modelos de severidad, include=FALSE}
+
+#Parametros de cada modelo
+summary(fit.gamma_sev)
+summary(fit.weibull_sev)
+summary(fit.lnor_sev)
+summary(fit.pareto_sev)
+
+```
+
+Dadas las pruebas graficas observamos que la distribucion Log-Normal es la que mejor se ajusta a nuestros datos para modelar la severidad de siniestros. Por lo que asignamos la distribucion Log-Normal con parametros $\mu = 0.7837700$ y $\sigma= 0.6871328$, esto es $(X_i|) \sim LogN(\mu = 0.7837700, \sigma = 0.6871328)$.
+
+
+### Agregacion de riesgos
+
+La agregacion de riesgos se realizar? mediante simulaci?n, tomado las distribuciones $(X_i|) \sim Pos(\lambda = 30.14)$ para la frecuencia de siniestros y $(X_i|) \sim Gamma(\alpha = 1.415, \beta = 0.373)$. para la severidad.
+
+Se realizan N=1000 simulaciones de la agregaci?n de riesgos, cada simulaci?n consta de simular un n?mero k de siniestros de acuerdo a la estimaci?n de la frecuencia anual de siniestros y simular k valores de la severidad de acuerdo a la estimaci?n severidad individual y la suma de estas k severidades es un valor muestral de la agregaci?n de siniestros.
+
+```{r Agregacion de riesgos mediante simulaci?n}
+
+#N numero de simulaciones
+N=1000
+J=500
+
+Sim <- matrix(0,N,J+1)
+for(i in 1:N){
+  K <- rep(0,J)
+  Num_sin <- rnbinom(1, 6.2*fit.frecuencia$estimate[1],mu=6.2*fit.frecuencia$estimate[2])
+  for (j in 1:Num_sin){
+    X <- rpareto(1,shape = 15, scale = fit.severidad$estimate[1])
+    K[j] <- X
+  }
+  tot <- sum(K)
+  Sim[i,] <- c(K,tot)
+}
+
+Sim <- data.frame(Sim)
+Muestra_monto_ag <- Sim[,J+1]
+
+```
+
+```{r Agregacion de riesgos, echo=FALSE}
+
+#Modelos
+fit.gamma_ag <- fitdist(Muestra_monto_ag, "gamma","mle")
+fit.lnor_ag  <- fitdist(Muestra_monto_ag,"lnorm","mle")
+fit.nor_ag  <- fitdist(Muestra_monto_ag,"norm","mle")
+
+
+#Graficas comparativas 
+par(mfrow=c(2,2))
+plot.legend <- c("Normal", "Gamma", "Log-Normal")
+denscomp(list(fit.nor_ag, fit.gamma_ag, fit.lnor_ag), legendtext = plot.legend)
+cdfcomp (list(fit.nor_ag, fit.gamma_ag, fit.lnor_ag), legendtext = plot.legend)
+qqcomp  (list(fit.nor_ag, fit.gamma_ag, fit.lnor_ag), legendtext = plot.legend)
+ppcomp  (list(fit.nor_ag, fit.gamma_ag, fit.lnor_ag), legendtext = plot.legend)
+
+#Errores cuadraticos medios de cada modelo
+Error.gamma <- ECM(Muestra_monto_ag,rgamma(length(Muestra_monto_ag),fit.gamma_ag$estimate[1],fit.gamma_ag$estimate[2]))
+Error.lnor <- ECM(Muestra_monto_ag,rlnorm(length(Muestra_monto_ag),fit.lnor_ag$estimate[1],fit.lnor_ag$estimate[2]))
+Error.nor <- ECM(Muestra_monto_ag,rnorm(length(Muestra_monto_ag),fit.nor_ag$estimate[1],fit.nor_ag$estimate[2]))
+
+Errores <- c(Error.gamma,Error.lnor,Error.nor)
+df_errores <- data.frame(Errores)
+rownames(df_errores) <- c("Gamma","Log-Normal","Normal")
+
+df_errores
+
+fit.agregacion <- fit.gamma_ag
+
+#Estadisticas
+
+gofstat(list(fit.nor_ag, fit.gamma_ag, fit.lnor_ag), fitnames=c("Normal", "Gamma", "Log-normal"))
+
+
+```
+
+```{r Descripcion de los modelos de agregacion de riesgos, include=FALSE}
+
+#Parametros de cada modelo
+summary(fit.gamma_ag)
+summary(fit.lnor_ag)
+summary(fit.nor_ag)
+
+###Tambien puede ser la normal
+
+```
+Dadas las pruebas graficas observamos que la distribucion Log-Normal es la que mejor se ajusta a nuestros datos para modelar la sagragacion de riesgos. Por lo que asignamos la distribucion Log-Normal con parametros $\mu = 9.19169316	$ y $\sigma= 0.01288451$, esto es $(X_i|) \sim LogN(\mu =9.19169316, \sigma = 0.01288451)$.
+
+
+```{r Predicci?n sobre riesgo agregado, echo=FALSE}
+
+#Prediccion sobre los proximos tres a?os
+
+Pred <- rgamma(3,fit.agregacion$estimate[1],fit.agregacion$estimate[2])
+
+#Separacion por a?o 
+indice_anos <- endpoints(Test, on="years")
+indice_anos <- indice_anos[2:length(indice_anos)]
+
+#Agregacion siniestros por a?o de los valores de prueba
+Agregacion_test <- c()
+cont<-1
+for (i in indice_anos) {
+  agr_ano <- 0
+  while (i>=cont) {
+    agr_ano <- agr_ano + Test$total[cont]
+    cont <- cont+1
+  }
+  Agregacion_test <- c(Agregacion_test,agr_ano)
+}
+
+#Errores cuadraticos medios de cada modelo
+Error.gamma <- ECM(Agregacion_test,Pred)
+Error.gamma
+
+```
+
+```{r Predicci?n por arima sobre riesgo agregado, echo=FALSE}
+
+arima.reg <- auto.arima(Muestra_monto_ag)
+fc <-  forecast(Muestra_monto_ag, model=arima.reg, h=3, level = 95)
+
+tabla_pred <- data.frame(fc$mean, fc$lower, fc$upper)
+colnames(tabla_pred) <- c("Agregado", "Low 95%", "High 95%")
+rownames(tabla_pred) <- c("1988","1989","1990")
+tabla_pred
+
+summary(arima.reg)
+
+```
+
+```{r Validacion del modelo}
+
+Test.88 <- window(ts,start="1988-01-01",end="1988-12-31")
+Test.89 <- window(ts,start="1989-01-01",end="1989-12-31")
+Test.90 <- window(ts,start="1990-01-01",end="1990-12-31")
+
+
+test.mon.88 <- Test.88$Monto
+test.mon.89 <- Test.89$Monto
+test.mon.90 <- Test.90$Monto
+
+sum(test.mon.88)
+sum(test.mon.89)
+sum(test.mon.90)
+
+ytest <- c(928.59,1057.56,887)
+yestim <- c(652.12,646.09,651.55)
+
+ECM(ytest, yestim)
+
+
+```
+
+
+###Calculo de primas
+
+```{r Calculo de primas antes de modificaciones, echo=FALSE}
+
+#Prima Base
+Prima1 <- sum(Muestra_monto_ag)/N
+
+#Prima basada en Var con alpha = 0.999
+
+## tVaR calculado bajo otra formula (Modelos Actuariales)
+#Buscamos las observaciones que excedan el Qa buscado
+
+simulacion.orden <- sort(Muestra_monto_ag)
+g <- floor((1000+1)*0.99)
+h <- (1000+1)*0.99 - g
+
+Lg <- simulacion.orden[990]
+Lg1 <- simulacion.orden[991]
+
+suma.lj <- simulacion.orden[991:1000]
+suma.lj <- sum(suma.lj)
+CTEa <- 1/(1000-990)*suma.lj
+CTEa
+
+#CTEa es la prima que se debe cobrar mediante el calculo de TVaR
+
+#Prima basada en principio de utilidad 0 
+
+#Definimos fn de utilidad como: u(x) = 1- exp(-ax) con a>0 y x>0
+
+a <- 10
+w <- 10000
+M <- (1-fit.agregacion$estimate[2]*a)^(-fit.agregacion$estimate[1])
+ut <- function(x){
+  u <- 1-exp(-x)
+  return(u)
+}
+
+Prima3 <- (1/a)*(log((1-ut(w)))-log((exp(a*w)*M)))
+Prima3
+
+
+```
+
+### Modificaciones por deducible, limite de cobertura y coaseguro
+
+```{r Limite de cobertura, echo=FALSE}
+
+lim_build <- which(Train$building>13)
+
+Train_lim <- Train
+for (i in lim_build){
+  Train_lim$total[i] <- Train_lim$total[i]-Train_lim$building[i]+13
+  Train_lim$building[i] <- 13
+}
+
+lim_tot  <- which(Train_lim$total>24)
+for (i in lim_tot){
+  Train_lim$total[i] <- 24
+}
+
+```
+
+
+
+```{r Severidad de Siniestros con modificaciones, echo=FALSE}
+
+##Severidad individual del Total
+
+#Datos de severidades del Total (>0) (todos)
+
+#Modelos
+fit.gamma_sevmod <- fitdist(Train_lim$total, "gamma")
+fit.weibull_sevmod  <- fitdist (Train_lim$total, "weibull")
+fit.lnor_sevmod  <- fitdist(Train_lim$total,"lnorm")
+fit.pareto_sevmod <- fitdist(Train_lim$total, "pareto", start=list(shape = 12, scale = 70))
+
+#Graficas comparativas 
+par(mfrow=c(2,2))
+plot.legend <- c("Weibull", "gamma", "pareto", "log-normal")
+denscomp(list(fit.weibull_sevmod, fit.gamma_sevmod, fit.pareto_sevmod, fit.lnor_sevmod), legendtext = plot.legend)
+cdfcomp (list(fit.weibull_sevmod, fit.gamma_sevmod, fit.pareto_sevmod, fit.lnor_sevmod), legendtext = plot.legend)
+qqcomp  (list(fit.weibull_sevmod, fit.gamma_sevmod, fit.pareto_sevmod, fit.lnor_sevmod), legendtext = plot.legend)
+ppcomp  (list(fit.weibull_sevmod, fit.gamma_sevmod, fit.pareto_sevmod, fit.lnor_sevmod), legendtext = plot.legend)
+
+#Errores cuadraticos medios de cada modelo
+Error.gamma <- ECM(Train_lim$total,rgamma(length(Train_lim$total),fit.gamma_sev$estimate[1],fit.gamma_sev$estimate[2]))
+Error.weibull <- ECM(Train_lim$total,rweibull(length(Train_lim$total),fit.weibull_sev$estimate[1],fit.weibull_sev$estimate[2]))
+Error.lnor <- ECM(Train_lim$total,rlnorm(length(Train_lim$total),fit.lnor_sev$estimate[1],fit.lnor_sev$estimate[2]))
+Error.pareto <- ECM(Train_lim$total,rpareto(length(Train_lim$total),12,fit.pareto_sev$estimate[1]))
+
+Errores <- c(Error.gamma,Error.weibull,Error.lnor,Error.pareto)
+df_errores <- data.frame(Errores)
+rownames(df_errores) <- c("Gamma","Weibull","Log-Normal","Pareto")
+
+df_errores
+
+fit.severidad_mod <- fit.gamma_sevmod
+
+```
+
+
+### Agregacion de riesgos con modificaciones
+
+La agregacion de riesgos se realizar? mediante simulaci?n, tomado las distribuciones $(X_i|) \sim Pos(\lambda = 30.14)$ para la frecuencia de siniestros y $(X_i|) \sim Gamma(\alpha = 1.808, \beta = 0.614)$. para la severidad con modificaciones de deducible, coaseguro y l?mite de cobertura.
+
+Se realizan N=1000 simulaciones de la agregaci?n de riesgos, cada simulaci?n consta de simular un n?mero k de siniestros de acuerdo a la estimaci?n frecuencia anual de siniestros y simular k valores de la severidad de acuerdo a la estimaci?n de la severidad individual modificada y la suma de estas k severidades es un valor muestral de la agregaci?n de siniestros.
+
+
+```{r Agregacion de riesgos con modificaciones mediante simulaci?n}
+
+#N numero de simulaciones
+N=1000
+J=500
+
+Sim <- matrix(0,N,J+1)
+for(i in 1:N){
+  K <- rep(0,J)
+  Num_sin <- rpois(1,6.2*fit.frecuencia$estimate[1])
+  for (j in 1:Num_sin){
+    X <- rgamma(1,fit.severidad_mod$estimate[1],fit.severidad_mod$estimate[2])
+    K[j] <- X
+  }
+  tot <- sum(K)
+  Sim[i,] <- c(K,tot)
+}
+
+Sim <- data.frame(Sim)
+Muestra_monto_agmod <- Sim[,J+1]
+
+```
+
+```{r Agregacion de riesgos con modificaciones, echo=FALSE}
+
+#Modelos
+fit.gamma_agmod <- fitdist(Muestra_monto_ag, "gamma","mle")
+fit.lnor_agmod  <- fitdist(Muestra_monto_ag,"lnorm","mle")
+fit.nor_agmod  <- fitdist(Muestra_monto_ag,"norm","mle")
+
+#Graficas comparativas 
+par(mfrow=c(2,2))
+plot.legend <- c("Normal", "Gamma", "Log-Normal")
+denscomp(list(fit.nor_agmod, fit.gamma_agmod, fit.lnor_agmod), legendtext = plot.legend)
+cdfcomp (list(fit.nor_agmod, fit.gamma_agmod, fit.lnor_agmod), legendtext = plot.legend)
+qqcomp  (list(fit.nor_agmod, fit.gamma_agmod, fit.lnor_agmod), legendtext = plot.legend)
+ppcomp  (list(fit.nor_agmod, fit.gamma_agmod, fit.lnor_agmod), legendtext = plot.legend)
+
+#Errores cuadraticos medios de cada modelo
+Error.gamma <- ECM(Muestra_monto_ag,rgamma(length(Muestra_monto_ag),fit.gamma_agmod$estimate[1],fit.gamma_agmod$estimate[2]))
+Error.lnor <- ECM(Muestra_monto_ag,rlnorm(length(Muestra_monto_ag),fit.lnor_agmod$estimate[1],fit.lnor_agmod$estimate[2]))
+Error.nor <- ECM(Muestra_monto_ag,rnorm(length(Muestra_monto_ag),fit.nor_agmod$estimate[1],fit.nor_agmod$estimate[2]))
+
+Errores <- c(Error.gamma,Error.lnor,Error.nor)
+df_errores <- data.frame(Errores)
+rownames(df_errores) <- c("Gamma","Log-Normal","Normal")
+
+df_errores
+
+fit.agregacion_mod <- fit.gamma_agmod
+
+#Estadisticas
+
+gofstat(list(fit.nor_agmod, fit.gamma_agmod, fit.lnor_agmod), fitnames=c("Normal", "Gamma", "Log-normal"))
+
+
+```
+
+```{r Descripcion de los modelos de agregacion de riesgos con modificaciones, include=FALSE}
+
+#Parametros de cada modelo
+summary(fit.gamma_agmod)
+summary(fit.lnor_agmod)
+summary(fit.nor_agmod)
+
+```
+
+
+```{r Primas datos modificados}
+
+#Prima Base
+Prima1.mod <- sum(Muestra_monto_agmod)/N
+
+#Prima basada en Var con alpha = 0.999
+
+## tVaR calculado bajo otra formula (Modelos Actuariales)
+#Buscamos las observaciones que excedan el Qa buscado
+
+simulacion.orden.mod <- sort(Muestra_monto_agmod)
+g.mod <- floor((1000+1)*0.99)
+h.mod <- (1000+1)*0.99 - g.mod
+
+Lg.mod <- simulacion.orden.mod[990]
+Lg1.mod <- simulacion.orden.mod[991]
+
+suma.lj.mod <- simulacion.orden.mod[991:1000]
+suma.lj.mod <- sum(suma.lj)
+CTEa.mod <- 1/(1000-990)*suma.lj.mod
+CTEa.mod
+
+#CTEa es la prima que se debe cobrar mediante el calculo de TVaR
+
+##Prima basada en principio de utilidad 0 
+
+#Definimos fn de utilidad como: u(x) = 1- exp(-ax) con a>0 y x>0
+
+
+fgm.gamma.mod <- mgfgamma(t = 2, shape = 39, rate = 10)
+
+
+
+```
+
+

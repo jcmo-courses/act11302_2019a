@@ -1,0 +1,318 @@
+---
+title: "Peoyecto Final"
+author: "Gabriel, Uriel, Joel"
+date: "23 de mayo de 2019"
+output: html_document
+---
+
+##2 Caracterización de la frecuencia y de los reclamos individuales
+
+Se consideran la separación de la base de datos, para identificar los datos de entrenamiento y de prueba.
+
+
+```{r}
+library(fitdistrplus)
+set.seed(23)
+getwd()
+setwd("C:\\Users\\frite\\Desktop\\Proyect_final")
+Datos <-read.csv(file="Entrenamiento1.csv", header=TRUE, sep=",")
+head(Datos)
+```
+
+```{r}
+fecha <- Datos$ï..Date
+meses <- Datos$mes
+año <- Datos$Anio
+frecuencia <- Datos$frecuencia
+
+```
+Ahora extraemos la frecuencia anual de siniestros
+```{r}
+frecuencia.año <- c()
+for(i in 1:7){
+   frecuencia.año[i] <- frecuencia[i]
+  
+}
+frecuencia.año
+
+```
+
+Quedando los registros anuales de frecuencia
+
+```{r, fig.width=6, fig.height=3}
+frecuencia.año
+summary(frecuencia.año)
+var(frecuencia.año)
+plot(1:7, frecuencia.año, main = "Frecuencia anual", 
+     xlab = "Año", ylab = "", col = 2, pch = 19)
+```
+La media es mucho más pequeña que la Varianza, así si se desea adaptar un modelo paramétrico, los modelos usuales son Poisson, Binomial y Binomial Negativa, los primeros dos quedan descartados pues en el primero la varianza y esperanza son iguales y en el segundo la varianza es más pequeña que la media, así que en principio el modelo que mejor se adaptaría sería la Binomial Negativa. Además, la variable aleatoria Binomial está acotada, por lo que queda descartada definitivamente.
+##Modelos para frecuencia
+```{r}
+
+
+modelo.poisson <- fitdist(frecuencia.año, distr = ppois)
+summary(modelo.poisson)
+
+modelo.bin.neg <- fitdist(frecuencia.año, distr = pnbinom)
+summary(modelo.bin.neg)
+```
+De nuevo, el modelo de la binomial negativa resulto mejor bajo el criterio de AKaike y bajo el criterio de la Logverosimilitud por una gran diferencia en ambos.
+
+Así, el modelo seleccionado para la frecuencia de los siniestros es Binomial Negativa con parámetros size =62.72345 y mu = 182.56006
+
+Luego, tenemos que modelar la severidad, la cual está dada por la variable Total, supondremos además que la frecuencia es independiente de la severidad.
+##Modelos para severidad
+```{r}
+severidad <- Datos$total
+
+modelo.gamma <- fitdist(severidad, distr = pgamma, method = 'mme')
+summary(modelo.gamma)
+
+modelo.lognormal <- fitdist(severidad, distr = plnorm)
+summary(modelo.lognormal)
+
+modelo.weibull <- fitdist(severidad, distr = pweibull)
+summary(modelo.weibull)
+```
+Modelamos unicamente a través de variables aleatorias continuas, ya que en teoría, la severidad puede tomar cualquier real positivo, y positivas por lo anterior. Además con las 3 v.a. continuas positivas mas comunes para modelar este tipo de fenomenos
+incluidas en $R$ $basis$.
+
+De las 3, el modelo que mejor se adapta es la variable aleatoria Log-Normal con parámetros meanlog=0.7910909 y sdlog=0.6849786, elegimos la lognormal porque tiene dos parametros importantes la media es el parametro de localización, sigma es el parametro de escala. Ademas la estimación de estos parametros es relativamente sencilla empleando la transformacion inversa que da origen a esta distribución sobre los datos.
+
+```{r}
+plotdist(severidad, distr = plnorm, para = list(meanlog=0.7910909, sdlog=0.6849786))
+```
+Podemos ver que se adapta mejor en el P-P plot y a través de la CDF
+
+## Caracterización del modelo agregado
+
+```{r}
+getwd()
+setwd("C:\\Users\\frite\\Desktop\\Proyect_final")
+DatosP <-read.csv(file="Prueba1.csv", header=TRUE, sep=",")
+head(DatosP)
+```
+
+Ahora extraemos la frecuencia anual de siniestros
+```{r}
+frecuenciaP <- DatosP$frecuencia
+frecuencia.añoP <- c()
+for(i in 1:2){
+   frecuencia.añoP[i] <- frecuenciaP[i]
+  
+}
+frecuencia.añoP
+
+```
+
+Quedando los registros anuales de frecuencia
+
+```{r, fig.width=6, fig.height=3}
+frecuencia.añoP
+summary(frecuencia.añoP)
+var(frecuencia.añoP)
+plot(1:2, frecuencia.añoP, main = "Frecuencia anual", 
+     xlab = "Año", ylab = "", col = 2, pch = 19)
+```
+La media es mucho más pequeña que la Varianza, así si se desea adaptar un modelo paramétrico, los modelos usuales son Poisson, Binomial y Binomial Negativa, los primeros dos quedan descartados pues en el primero la varianza y esperanza son iguales y en el segundo la varianza es más pequeña que la media, así que en principio el modelo que mejor se adaptaría sería la Binomial Negativa. Además, la variable aleatoria Binomial está acotada, por lo que queda descartada definitivamente.
+
+
+
+
+##Modelos para frecuencia
+```{r}
+modelo.poissonP <- fitdist(frecuencia.añoP, distr = ppois)
+summary(modelo.poissonP)
+
+modelo.bin.negP <- fitdist(frecuencia.añoP, distr = pnbinom)
+summary(modelo.bin.negP)
+```
+De nuevo, el modelo de la binomial negativa resulto mejor bajo el criterio de AKaike y bajo el criterio de la Logverosimilitud por una gran diferencia en ambos.
+
+Así, el modelo seleccionado para la frecuencia de los siniestros es Binomial Negativa con parámetros size = 2.724546e+08  y mu = 2.220019e+02 
+
+Luego, tenemos que modelar la severidad, la cual está dada por la variable Total, supondremos además que la frecuencia es independiente de la severidad.
+##Modelos para severidad
+```{r}
+severidadP <- DatosP$total
+
+modelo.gammaP <- fitdist(severidadP, distr = pgamma, method = 'mme')
+summary(modelo.gammaP)
+
+modelo.lognormalP <- fitdist(severidadP, distr = plnorm)
+summary(modelo.lognormalP)
+
+modelo.weibullP <- fitdist(severidadP, distr = pweibull)
+summary(modelo.weibullP)
+```
+Modelamos unicamente a través de variables aleatorias continuas, ya que en teoría, la severidad puede tomar cualquier real positivo, y positivas por lo anterior. Además con las 3 v.a. continuas positivas mas comunes para modelar este tipo de fenomenos
+incluidas en $R$ $basis$.
+
+De las 3, el modelo que mejor se adapta es la variable aleatoria Log-Normal con parámetros meanlog=0.8223288 y sdlog=0.7961354
+
+```{r}
+plotdist(severidadP, distr = plnorm, para = list(meanlog=0.8223288 , sdlog=0.7961354))
+```
+
+Finalmente el modelo agregado de riesgos que se obtendría sería S donde N se distribuye binomial negativa con parámetros size = 2.724546e+08  y mu = 2.220019e+02 y donde Y se distribuye Log-Normal de parámetros meanlog=0.8223288 y sdlog=0.7961354.
+
+
+Es decir, para el riesgo agregado anual, tenemos un modelo de la forma: $S = \sum_{k=0}^{N}{X_k}$ donde $N\sim BinNeg(r=2.724546e+08, \mu = 2.220019e+02)$ y $(X_k)_{k=1}^{\infty}$ es una suc. de v.a. i.i.d. con distribución $Log-Normal(\mu = 0.8223288, \sigma ^2=0.633831575)$
+
+##Prediccion anual
+
+```{r}
+Est_BinNeg<-c(rnegbin(2,2.220019e+02,2.724546e+08))
+Est_lnorm1<-c(rlnorm(Est_BinNeg[1],0.8223288,0.7961354))
+S1<-sum(Est_lnorm1)
+S1
+Est_lnorm2<-c(rlnorm(Est_BinNeg[2],0.8223288,0.7961354))
+S2<-sum(Est_lnorm2)
+S2
+```
+
+
+
+##Primas
+
+##Prima base
+Es la prima de riesgo básica, se define como la pérdida esperada
+
+```{r}
+Esp_Frec <- 2.220019e+02
+Esp_Sev <- 1
+prima_Base <- Esp_Frec*Esp_Sev
+prima_Base
+```
+##Prima principio de varianza
+ Es la prima de riesgo básica, se define como la pérdida esperada ajustada por un
+margen de aceptación de riesgo, ??=0.999 > 0
+
+```{r}
+p <- .999
+alpha <- .999
+var_Frec <- Esp_Frec*(1/p)
+var_Sev <- 2.862503e-11
+prima_var <- prima_Base + alpha*var_Frec*var_Sev
+prima_var
+```
+Esta prima es más grande que la prima base, pero el incremento es pequeño por que la varianza de severidad es muy pequeña.
+
+#Prima de riesgo basada en el principio del valor esperado
+es la prima de riesgo basica, se define como la perdida esperada ajustada por un margen de aceptacion de riesgo, theta mayor a cero.
+
+```{r}
+theta <- 0.2
+prima_Esp <- prima_Base*(1+theta)
+prima_Esp
+
+```
+##Deducible Coaseguro y limites de cobertura
+
+
+```{r}
+getwd()
+setwd("C:\\Users\\frite\\Desktop\\Proyect_final")
+DatosP2 <-read.csv(file="prueba2.csv", header=TRUE, sep=",")
+head(DatosP2)
+```
+
+Ahora extraemos la frecuencia anual de siniestros
+```{r}
+frecuenciaP2 <- DatosP2$Frecuencia
+frecuencia.añoP2 <- c()
+for(i in 1:2){
+   frecuencia.añoP2[i] <- frecuenciaP2[i]
+  
+}
+frecuencia.añoP2
+
+```
+
+Quedando los registros anuales de frecuencia
+
+```{r, fig.width=6, fig.height=3}
+frecuencia.añoP2
+summary(frecuencia.añoP2)
+var(frecuencia.añoP2)
+plot(1:2, frecuencia.añoP2, main = "Frecuencia anual", 
+     xlab = "Año", ylab = "", col = 2, pch = 19)
+```
+La media es mucho más pequeña que la Varianza, así si se desea adaptar un modelo paramétrico, los modelos usuales son Poisson, Binomial y Binomial Negativa, los primeros dos quedan descartados pues en el primero la varianza y esperanza son iguales y en el segundo la varianza es más pequeña que la media, así que en principio el modelo que mejor se adaptaría sería la Binomial Negativa. Además, la variable aleatoria Binomial está acotada, por lo que queda descartada definitivamente.
+##Modelos para frecuencia
+```{r}
+modelo.poissonP2 <- fitdist(frecuencia.añoP2, distr = ppois)
+summary(modelo.poissonP2)
+
+modelo.bin.negP2 <- fitdist(frecuencia.añoP2, distr = pnbinom)
+summary(modelo.bin.negP2)
+```
+De nuevo, el modelo de la binimial negativa resulto mejor bajo el criterio de AKaike y bajo el criterio de la Logverosimilitud por una gran diferencia en ambos.
+
+Así, el modelo seleccionado para la frecuencia de los siniestros es Binomial Negativa con parámetros size = 3.403069e+08  y mu = 7.449843e+01 
+
+Luego, tenemos que modelar la severidad, la cual está dada por la variable Total, supondremos además que la frecuencia es independiente de la severidad.
+##Modelos para severidad
+```{r}
+severidadP2 <- DatosP2$total
+
+modelo.gammaP2 <- fitdist(severidadP2, distr = pgamma, method = 'mme')
+summary(modelo.gammaP2)
+
+modelo.lognormalP2 <- fitdist(severidadP2, distr = plnorm)
+summary(modelo.lognormalP2)
+
+modelo.weibullP2 <- fitdist(severidadP2, distr = pweibull)
+summary(modelo.weibullP2)
+```
+Modelamos unicamente a través de variables aleatorias continuas, ya que en teoría, la severidad puede tomar cualquier real positivo, y positivas por lo anterior. Además con las 3 v.a. continuas positivas mas comunes para modelar este tipo de fenomenos
+incluidas en $R$ $basis$.
+
+De las 3, el modelo que mejor se adapta es la variable aleatoria Log-Normal con parámetros meanlog=1.4654609 y sdlog=0.5512879
+
+```{r}
+plotdist(severidadP2, distr = plnorm, para = list(meanlog=1.4654609 , sdlog=0.5512879))
+```
+
+Finalmente el modelo agregado de riesgos que se obtendría sería S donde N se distribuye binomial negativa con parámetros size = 3.403069e+08  y mu = 7.449843e+01 y donde Y se distribuye Log-Normal de parámetros meanlog=1.4654609 y sdlog=0.5512879.
+
+
+Es decir, para el riesgo agregado anual, tenemos un modelo de la forma: $S = \sum_{k=0}^{N}{X_k}$ donde $N\sim BinNeg(r=3.403069e+08, \mu = 7.449843e+01)$ y $(X_k)_{k=1}^{\infty}$ es una suc. de v.a. i.i.d. con distribución $Log-Normal(\mu = 1.4654609, \sigma ^2=0.303918348)$
+
+##Primas
+
+##Prima base
+Es la prima de riesgo básica, se define como la pérdida esperada
+
+```{r}
+Esp_Frec2 <- 7.449843e+01
+Esp_Sev2 <- 1.4654609
+prima_Base2 <- Esp_Frec2*Esp_Sev2
+prima_Base2
+```
+##Prima principio de varianza
+ Es la prima de riesgo básica, se define como la pérdida esperada ajustada por un
+margen de aceptación de riesgo, ??=0.999 > 0
+
+```{r}
+p <- .999
+alpha <- .999
+var_Frec2 <- Esp_Frec2*(1/p)
+var_Sev2 <- 0.303918348
+prima_var2 <- prima_Base2 + alpha*var_Frec2*var_Sev2
+prima_var2
+```
+Esta prima es más grande que la prima base, pero el incremento es pequeño por que la varianza de severidad es muy pequeña.
+
+#Prima de riesgo basada en el principio del valor esperado
+es la prima de riesgo basica, se define como la perdida esperada ajustada por un margen de aceptacion de riesgo, theta mayor a cero.
+
+```{r}
+theta <- 0.2
+prima_Esp2 <- prima_Base2*(1+theta)
+prima_Esp2
+
+```
+
+
